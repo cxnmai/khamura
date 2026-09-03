@@ -1,4 +1,4 @@
-use super::camera_capture::{CaptureMessage, CapturedFrame, capture_frames};
+use super::camera_capture::{CapturedFrame, capture_frames};
 use async_channel::Receiver;
 use gpui::{
     Context, IntoElement, ObjectFit, Render, RenderImage, Task, WeakEntity, Window, div, img,
@@ -37,19 +37,22 @@ impl Camera {
         }
     }
 
-    fn receive_frames(cx: &mut Context<Self>, receiver: Receiver<CaptureMessage>) -> Task<()> {
+    fn receive_frames(
+        cx: &mut Context<Self>,
+        receiver: Receiver<Result<CapturedFrame, String>>,
+    ) -> Task<()> {
         cx.spawn(async move |this: WeakEntity<Self>, cx| {
             while let Ok(message) = receiver.recv().await {
                 let update_succeeded = this
                     .update(&mut *cx, |camera, cx| {
                         match message {
-                            CaptureMessage::Frame(frame) => {
+                            Ok(frame) => {
                                 if let Some(image) = render_image(frame) {
                                     camera.frame = Some(Arc::new(image));
                                     camera.status.clear();
                                 }
                             }
-                            CaptureMessage::Error(error) => {
+                            Err(error) => {
                                 camera.status = error;
                             }
                         }

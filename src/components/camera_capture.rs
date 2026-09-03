@@ -15,28 +15,22 @@ pub(super) struct CapturedFrame {
     pub(super) height: u32,
 }
 
-pub(super) enum CaptureMessage {
-    Frame(CapturedFrame),
-    Error(String),
-}
-
-pub(super) fn capture_frames(sender: Sender<CaptureMessage>, stop_capture: Arc<AtomicBool>) {
+pub(super) fn capture_frames(
+    sender: Sender<Result<CapturedFrame, String>>,
+    stop_capture: Arc<AtomicBool>,
+) {
     let requested_format =
         RequestedFormat::new::<RgbFormat>(RequestedFormatType::AbsoluteHighestFrameRate);
     let mut camera = match NokhwaCamera::new(CameraIndex::default(), requested_format) {
         Ok(camera) => camera,
         Err(error) => {
-            let _ = sender.try_send(CaptureMessage::Error(format!(
-                "Could not open camera: {error}"
-            )));
+            let _ = sender.try_send(Err(format!("Could not open camera: {error}")));
             return;
         }
     };
 
     if let Err(error) = camera.open_stream() {
-        let _ = sender.try_send(CaptureMessage::Error(format!(
-            "Could not start camera: {error}"
-        )));
+        let _ = sender.try_send(Err(format!("Could not start camera: {error}")));
         return;
     }
 
@@ -44,18 +38,14 @@ pub(super) fn capture_frames(sender: Sender<CaptureMessage>, stop_capture: Arc<A
         let buffer = match camera.frame() {
             Ok(buffer) => buffer,
             Err(error) => {
-                let _ = sender.try_send(CaptureMessage::Error(format!(
-                    "Could not capture frame: {error}"
-                )));
+                let _ = sender.try_send(Err(format!("Could not capture frame: {error}")));
                 break;
             }
         };
         let decoded = match buffer.decode_image::<RgbFormat>() {
             Ok(decoded) => decoded,
             Err(error) => {
-                let _ = sender.try_send(CaptureMessage::Error(format!(
-                    "Could not decode frame: {error}"
-                )));
+                let _ = sender.try_send(Err(format!("Could not decode frame: {error}")));
                 break;
             }
         };
@@ -69,7 +59,7 @@ pub(super) fn capture_frames(sender: Sender<CaptureMessage>, stop_capture: Arc<A
         }
 
         if sender
-            .send_blocking(CaptureMessage::Frame(CapturedFrame {
+            .send_blocking(Ok(CapturedFrame {
                 pixels: bgra,
                 width,
                 height,
