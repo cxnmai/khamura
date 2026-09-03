@@ -1,5 +1,4 @@
 use async_channel::Sender;
-use image::{ColorType, ImageEncoder, codecs::jpeg::JpegEncoder};
 use nokhwa::{
     Camera as NokhwaCamera,
     pixel_format::RgbFormat,
@@ -10,8 +9,14 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
 };
 
+pub(super) struct CapturedFrame {
+    pub(super) pixels: Vec<u8>,
+    pub(super) width: u32,
+    pub(super) height: u32,
+}
+
 pub(super) enum CaptureMessage {
-    Frame(Vec<u8>),
+    Frame(CapturedFrame),
     Error(String),
 }
 
@@ -55,21 +60,22 @@ pub(super) fn capture_frames(sender: Sender<CaptureMessage>, stop_capture: Arc<A
             }
         };
 
-        let mut jpeg = Vec::new();
-        let encoder = JpegEncoder::new_with_quality(&mut jpeg, 80);
-        if let Err(error) = encoder.write_image(
-            decoded.as_raw(),
-            decoded.width(),
-            decoded.height(),
-            ColorType::Rgb8.into(),
-        ) {
-            let _ = sender.try_send(CaptureMessage::Error(format!(
-                "Could not encode frame: {error}"
-            )));
-            break;
+        let width = decoded.width();
+        let height = decoded.height();
+        let mut bgra = Vec::with_capacity(decoded.as_raw().len() / 3 * 4);
+        for pixel in decoded.as_raw().chunks_exact(3) {
+            // GPUI's RenderImage expects pixels in BGRA order.
+            bgra.extend_from_slice(&[pixel[2], pixel[1], pixel[0], 255]);
         }
 
-        if sender.send_blocking(CaptureMessage::Frame(jpeg)).is_err() {
+        if sender
+            .send_blocking(CaptureMessage::Frame(CapturedFrame {
+                pixels: bgra,
+                width,
+                height,
+            }))
+            .is_err()
+        {
             break;
         }
     }

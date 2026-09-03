@@ -1,9 +1,10 @@
-use super::camera_capture::{CaptureMessage, capture_frames};
+use super::camera_capture::{CaptureMessage, CapturedFrame, capture_frames};
 use async_channel::Receiver;
 use gpui::{
-    Context, Image, ImageFormat, IntoElement, ObjectFit, Render, Task, WeakEntity, Window, div,
-    img, prelude::*,
+    Context, IntoElement, ObjectFit, Render, RenderImage, Task, WeakEntity, Window, div, img,
+    prelude::*,
 };
+use image::{Frame, ImageBuffer, Rgba};
 use std::{
     sync::{
         Arc,
@@ -13,7 +14,7 @@ use std::{
 };
 
 pub struct Camera {
-    frame: Option<Arc<Image>>,
+    frame: Option<Arc<RenderImage>>,
     status: String,
     stop_capture: Arc<AtomicBool>,
     _capture_task: Task<()>,
@@ -42,10 +43,11 @@ impl Camera {
                 let update_succeeded = this
                     .update(&mut *cx, |camera, cx| {
                         match message {
-                            CaptureMessage::Frame(bytes) => {
-                                camera.frame =
-                                    Some(Arc::new(Image::from_bytes(ImageFormat::Jpeg, bytes)));
-                                camera.status.clear();
+                            CaptureMessage::Frame(frame) => {
+                                if let Some(image) = render_image(frame) {
+                                    camera.frame = Some(Arc::new(image));
+                                    camera.status.clear();
+                                }
                             }
                             CaptureMessage::Error(error) => {
                                 camera.status = error;
@@ -86,4 +88,10 @@ impl Drop for Camera {
     fn drop(&mut self) {
         self.stop_capture.store(true, Ordering::Relaxed);
     }
+}
+
+fn render_image(frame: CapturedFrame) -> Option<RenderImage> {
+    let buffer =
+        ImageBuffer::<Rgba<u8>, Vec<u8>>::from_raw(frame.width, frame.height, frame.pixels)?;
+    Some(RenderImage::new(vec![Frame::new(buffer)]))
 }
