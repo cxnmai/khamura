@@ -5,3 +5,6 @@ edition = "2024"
 
 [dependencies]
 gpui = "0.2.2"
+nokhwa = { version = "0.10.10", default-features = false, features = ["input-v4l", "decoding"] }
+async-channel = "2.5"
+image = { version = "0.25.10", default-features = false, features = ["jpeg"] }

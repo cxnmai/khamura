@@ -21,9 +21,15 @@
           ];
         in {
           default = pkgs.mkShell {
-            nativeBuildInputs = with pkgs; [ pkg-config ];
+            nativeBuildInputs = with pkgs; [
+              pkg-config
+              llvmPackages.libclang
+              linuxHeaders
+            ];
             buildInputs = runtimeLibraries;
 
+            LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
+            BINDGEN_EXTRA_CLANG_ARGS = "-I${pkgs.linuxHeaders}/include -I${pkgs.stdenv.cc.libc_dev}/include";
             LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath runtimeLibraries;
           };
         });

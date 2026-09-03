@@ -1,9 +1,89 @@
-use gpui::{Context, IntoElement, Render, Window, div, prelude::*};
+use super::camera_capture::{CaptureMessage, capture_frames};
+use async_channel::Receiver;
+use gpui::{
+    Context, Image, ImageFormat, IntoElement, ObjectFit, Render, Task, WeakEntity, Window, div,
+    img, prelude::*,
+};
+use std::{
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    thread,
+};
 
-pub struct Camera;
+pub struct Camera {
+    frame: Option<Arc<Image>>,
+    status: String,
+    stop_capture: Arc<AtomicBool>,
+    _capture_task: Task<()>,
+}
+
+impl Camera {
+    pub fn new(cx: &mut Context<Self>) -> Self {
+        let (sender, receiver) = async_channel::bounded(1);
+        let stop_capture = Arc::new(AtomicBool::new(false));
+
+        let capture_task = Self::receive_frames(cx, receiver);
+        let capture_stop = Arc::clone(&stop_capture);
+        thread::spawn(move || capture_frames(sender, capture_stop));
+
+        Self {
+            frame: None,
+            status: "Starting camera…".into(),
+            stop_capture,
+            _capture_task: capture_task,
+        }
+    }
+
+    fn receive_frames(cx: &mut Context<Self>, receiver: Receiver<CaptureMessage>) -> Task<()> {
+        cx.spawn(async move |this: WeakEntity<Self>, cx| {
+            while let Ok(message) = receiver.recv().await {
+                let update_succeeded = this
+                    .update(&mut *cx, |camera, cx| {
+                        match message {
+                            CaptureMessage::Frame(bytes) => {
+                                camera.frame =
+                                    Some(Arc::new(Image::from_bytes(ImageFormat::Jpeg, bytes)));
+                                camera.status.clear();
+                            }
+                            CaptureMessage::Error(error) => {
+                                camera.status = error;
+                            }
+                        }
+                        cx.notify();
+                    })
+                    .is_ok();
+
+                if !update_succeeded {
+                    break;
+                }
+            }
+        })
+    }
+}
 
 impl Render for Camera {
     fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
-        div().size_full()
+        if let Some(frame) = self.frame.clone() {
+            div()
+                .size_full()
+                .child(img(frame).size_full().object_fit(ObjectFit::Cover))
+        } else {
+            div()
+                .size_full()
+                .flex()
+                .items_center()
+                .justify_center()
+                .bg(gpui::black())
+                .text_color(gpui::white())
+                .child(self.status.clone())
+        }
+    }
+}
+
+impl Drop for Camera {
+    fn drop(&mut self) {
+        self.stop_capture.store(true, Ordering::Relaxed);
     }
 }
