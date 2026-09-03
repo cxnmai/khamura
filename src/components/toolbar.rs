@@ -73,7 +73,8 @@ impl Render for Toolbar {
         } else {
             rail_color
         };
-        let muted_icon = gpui::white().opacity(0.55);
+        let photo_icon = contrasting_icon_color(photo_color);
+        let video_icon = contrasting_icon_color(video_color);
 
         div()
             .absolute()
@@ -115,27 +116,30 @@ impl Render for Toolbar {
                             .child(mode_button(
                                 "photo-mode",
                                 photo_color,
-                                if photo_selected {
-                                    gpui::black()
-                                } else {
-                                    muted_icon
-                                },
+                                photo_icon,
                                 APERTURE,
                                 cx.listener(Self::on_photo_click),
                             ))
                             .child(mode_button(
                                 "video-mode",
                                 video_color,
-                                if video_selected {
-                                    gpui::white()
-                                } else {
-                                    muted_icon
-                                },
+                                video_icon,
                                 if video_active { CIRCLE_STOP } else { VIDEO },
                                 cx.listener(Self::on_video_click),
                             )),
                     ),
             )
+    }
+}
+
+fn contrasting_icon_color(background: gpui::Hsla) -> gpui::Hsla {
+    let color = gpui::Rgba::from(background);
+    let brightness = 0.299 * color.r + 0.587 * color.g + 0.114 * color.b;
+
+    if brightness >= 0.5 {
+        gpui::black()
+    } else {
+        gpui::white()
     }
 }
 
