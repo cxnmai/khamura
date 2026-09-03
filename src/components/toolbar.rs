@@ -1,8 +1,10 @@
 use crate::{
-    icons::{APERTURE, CIRCLE_STOP, VIDEO},
+    icons::{APERTURE, CIRCLE_STOP, MAXIMIZE_2, MINIMIZE_2, VIDEO},
     theme::CAMERA_LETTERBOX_COLOR,
 };
-use gpui::{App, ClickEvent, Context, IntoElement, Render, Window, div, prelude::*, px, svg};
+use gpui::{
+    App, ClickEvent, Context, EventEmitter, IntoElement, Render, Window, div, prelude::*, px, svg,
+};
 
 const BAR_WIDTH: f32 = 280.0;
 const BAR_HEIGHT: f32 = 48.0;
@@ -17,9 +19,14 @@ pub enum CameraMode {
     Video,
 }
 
+pub struct FitModeChanged {
+    pub cover: bool,
+}
+
 pub struct Toolbar {
     selected_mode: CameraMode,
     active: bool,
+    cover: bool,
 }
 
 impl Toolbar {
@@ -27,6 +34,7 @@ impl Toolbar {
         Self {
             selected_mode: CameraMode::Photo,
             active: false,
+            cover: false,
         }
     }
 
@@ -47,7 +55,15 @@ impl Toolbar {
     fn on_video_click(&mut self, _: &ClickEvent, _: &mut Window, cx: &mut Context<Self>) {
         self.select_or_toggle(CameraMode::Video, cx);
     }
+
+    fn on_fit_click(&mut self, _: &ClickEvent, _: &mut Window, cx: &mut Context<Self>) {
+        self.cover = !self.cover;
+        cx.emit(FitModeChanged { cover: self.cover });
+        cx.notify();
+    }
 }
+
+impl EventEmitter<FitModeChanged> for Toolbar {}
 
 impl Render for Toolbar {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
@@ -113,8 +129,19 @@ impl Render for Toolbar {
             )
             .children(mode_buttons);
 
+        let fit_button = mode_button(
+            "fit-window",
+            rail_color,
+            contrasting_icon_color(rail_color),
+            if self.cover { MINIMIZE_2 } else { MAXIMIZE_2 },
+            cx.listener(Self::on_fit_click),
+        );
+
         // Add future controls to this list; the outer pill lays them out consistently.
-        let bar_elements = vec![mode_toggle.into_any_element()];
+        let bar_elements = vec![
+            mode_toggle.into_any_element(),
+            fit_button.into_any_element(),
+        ];
 
         div()
             .absolute()

@@ -1,12 +1,12 @@
 use super::{
     camera_capture::{CapturedFrame, capture_frames},
-    toolbar::Toolbar,
+    toolbar::{FitModeChanged, Toolbar},
 };
 use crate::theme::{CAMERA_LETTERBOX_COLOR, CAMERA_LETTERBOX_OPACITY};
 use async_channel::Receiver;
 use gpui::{
-    Context, Entity, IntoElement, ObjectFit, Render, RenderImage, Size, Task, WeakEntity, Window,
-    div, img, prelude::*, size,
+    Context, Entity, IntoElement, ObjectFit, Render, RenderImage, Size, Subscription, Task,
+    WeakEntity, Window, div, img, prelude::*, size,
 };
 use image::{Frame, ImageBuffer, Rgba};
 use std::{
@@ -35,6 +35,7 @@ pub struct Camera {
     fit: CameraFit,
     stop_capture: Arc<AtomicBool>,
     toolbar: Entity<Toolbar>,
+    _toolbar_subscription: Subscription,
     _capture_task: Task<()>,
 }
 
@@ -46,6 +47,15 @@ impl Camera {
         let capture_task = Self::receive_frames(cx, receiver);
         let capture_stop = Arc::clone(&stop_capture);
         let toolbar = cx.new(Toolbar::new);
+        let toolbar_subscription =
+            cx.subscribe(&toolbar, |camera, _, event: &FitModeChanged, cx| {
+                let fit = if event.cover {
+                    CameraFit::Cover
+                } else {
+                    CameraFit::Contain
+                };
+                camera.set_fit(fit, cx);
+            });
         thread::spawn(move || capture_frames(sender, capture_stop));
 
         Self {
@@ -54,6 +64,7 @@ impl Camera {
             fit: CameraFit::default(),
             stop_capture,
             toolbar,
+            _toolbar_subscription: toolbar_subscription,
             _capture_task: capture_task,
         }
     }
