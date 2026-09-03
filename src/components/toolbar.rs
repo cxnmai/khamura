@@ -9,11 +9,8 @@ use gpui::{
 const BAR_WIDTH: f32 = 280.0;
 const BAR_HEIGHT: f32 = 48.0;
 const TOGGLE_HEIGHT: f32 = 40.0;
-const RAIL_HEIGHT: f32 = 20.0;
 const END_SIZE: f32 = 40.0;
 const ICON_SIZE: f32 = 20.0;
-const ITEM_DARKEN_FACTOR: f32 = 0.75;
-const ITEM_PADDING: f32 = 4.0;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CameraMode {
@@ -75,29 +72,25 @@ impl Render for Toolbar {
         let video_active = video_selected && self.active;
 
         let bar_color = CAMERA_LETTERBOX_COLOR.to_gpui(1.0);
-        let rail_color = gpui::Hsla::from(bar_color);
-        let item_color = darken_color(bar_color);
-        let photo_color = if photo_active {
-            gpui::white().opacity(0.65)
+        let theme_icon = contrasting_icon_color(gpui::Hsla::from(bar_color));
+        let photo_icon = if photo_active {
+            theme_icon.opacity(0.65)
         } else if photo_selected {
-            gpui::white()
+            theme_icon
         } else {
-            rail_color
+            theme_icon.opacity(0.55)
         };
-        let video_color = if video_active {
-            gpui::red()
+        let video_icon = if video_active {
+            theme_icon
         } else if video_selected {
-            gpui::red().opacity(0.65)
+            theme_icon.opacity(0.65)
         } else {
-            rail_color
+            theme_icon.opacity(0.55)
         };
-        let photo_icon = contrasting_icon_color(photo_color);
-        let video_icon = contrasting_icon_color(video_color);
 
         let mode_buttons = vec![
             mode_button(
                 "photo-mode",
-                photo_color,
                 photo_icon,
                 APERTURE,
                 cx.listener(Self::on_photo_click),
@@ -105,57 +98,26 @@ impl Render for Toolbar {
             .into_any_element(),
             mode_button(
                 "video-mode",
-                video_color,
                 video_icon,
                 if video_active { CIRCLE_STOP } else { VIDEO },
                 cx.listener(Self::on_video_click),
             )
             .into_any_element(),
         ];
-        let toggle_width = END_SIZE * mode_buttons.len() as f32;
         let mode_toggle = div()
-            .w(px(toggle_width + ITEM_PADDING * 2.0))
-            .h(px(BAR_HEIGHT))
-            .rounded_full()
+            .w(px(END_SIZE * mode_buttons.len() as f32))
+            .h(px(TOGGLE_HEIGHT))
             .flex()
             .items_center()
-            .justify_center()
-            .bg(item_color)
-            .child(
-                div()
-                    .relative()
-                    .w(px(toggle_width))
-                    .h(px(TOGGLE_HEIGHT))
-                    .flex()
-                    .items_center()
-                    .justify_between()
-                    .child(
-                        div()
-                            .absolute()
-                            .left(px(END_SIZE / 2.0))
-                            .right(px(END_SIZE / 2.0))
-                            .top(px((TOGGLE_HEIGHT - RAIL_HEIGHT) / 2.0))
-                            .h(px(RAIL_HEIGHT))
-                            .rounded_full()
-                            .bg(rail_color),
-                    )
-                    .children(mode_buttons),
-            );
+            .justify_between()
+            .children(mode_buttons);
 
-        let fit_button = div()
-            .size(px(BAR_HEIGHT))
-            .rounded_full()
-            .flex()
-            .items_center()
-            .justify_center()
-            .bg(item_color)
-            .child(mode_button(
-                "fit-window",
-                rail_color,
-                contrasting_icon_color(rail_color),
-                if self.cover { MINIMIZE_2 } else { MAXIMIZE_2 },
-                cx.listener(Self::on_fit_click),
-            ));
+        let fit_button = mode_button(
+            "fit-window",
+            theme_icon,
+            if self.cover { MINIMIZE_2 } else { MAXIMIZE_2 },
+            cx.listener(Self::on_fit_click),
+        );
 
         // Add future controls to this list; the outer pill lays them out consistently.
         let bar_elements = vec![
@@ -188,15 +150,6 @@ impl Render for Toolbar {
     }
 }
 
-fn darken_color(color: gpui::Rgba) -> gpui::Hsla {
-    gpui::Hsla::from(gpui::Rgba {
-        r: color.r * ITEM_DARKEN_FACTOR,
-        g: color.g * ITEM_DARKEN_FACTOR,
-        b: color.b * ITEM_DARKEN_FACTOR,
-        a: 1.0,
-    })
-}
-
 fn contrasting_icon_color(background: gpui::Hsla) -> gpui::Hsla {
     let color = gpui::Rgba::from(background);
     let brightness = 0.299 * color.r + 0.587 * color.g + 0.114 * color.b;
@@ -210,7 +163,6 @@ fn contrasting_icon_color(background: gpui::Hsla) -> gpui::Hsla {
 
 fn mode_button(
     id: &'static str,
-    background: gpui::Hsla,
     icon_color: gpui::Hsla,
     icon_path: &'static str,
     on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
@@ -218,11 +170,9 @@ fn mode_button(
     div()
         .id(id)
         .size(px(END_SIZE))
-        .rounded_full()
         .flex()
         .items_center()
         .justify_center()
-        .bg(background)
         .on_click(on_click)
         .child(
             svg()
