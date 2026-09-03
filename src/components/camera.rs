@@ -110,7 +110,8 @@ impl Render for Camera {
 
             div()
                 .size_full()
-                .bg(gpui::black())
+                // The image is opaque; only the letterbox area uses this alpha.
+                .bg(gpui::black().alpha(0.7))
                 .child(img(frame).size_full().object_fit(object_fit))
         } else {
             div()
