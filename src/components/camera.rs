@@ -1,4 +1,5 @@
 use super::camera_capture::{CapturedFrame, capture_frames};
+use crate::theme::CAMERA_LETTERBOX_COLOR;
 use async_channel::Receiver;
 use gpui::{
     Context, IntoElement, ObjectFit, Render, RenderImage, Size, Task, WeakEntity, Window, div, img,
@@ -122,7 +123,7 @@ impl Render for Camera {
                 .items_center()
                 .justify_center()
                 // The image is opaque; only the letterbox area uses this alpha.
-                .bg(gpui::black().alpha(0.7))
+                .bg(CAMERA_LETTERBOX_COLOR)
                 .child(image)
         } else {
             div()

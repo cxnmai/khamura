@@ -1,4 +1,5 @@
 mod components;
+mod theme;
 
 use components::camera::Camera;
 use gpui::{App, AppContext, Application, WindowBackgroundAppearance, WindowOptions};
