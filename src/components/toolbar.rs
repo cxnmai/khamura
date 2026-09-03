@@ -18,7 +18,7 @@ impl RenderOnce for Toolbar {
                     .w(px(280.))
                     .h(px(48.))
                     .rounded_full()
-                    .bg(CAMERA_LETTERBOX_COLOR),
+                    .bg(CAMERA_LETTERBOX_COLOR.to_gpui(1.0)),
             )
     }
 }

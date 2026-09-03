@@ -5,8 +5,8 @@ use super::{
 use crate::theme::{CAMERA_LETTERBOX_COLOR, CAMERA_LETTERBOX_OPACITY};
 use async_channel::Receiver;
 use gpui::{
-    Context, IntoElement, ObjectFit, Render, RenderImage, Rgba as GpuiRgba, Size, Task, WeakEntity,
-    Window, div, img, prelude::*, size,
+    Context, IntoElement, ObjectFit, Render, RenderImage, Size, Task, WeakEntity, Window, div, img,
+    prelude::*, size,
 };
 use image::{Frame, ImageBuffer, Rgba};
 use std::{
@@ -127,10 +127,7 @@ impl Render for Camera {
                 .items_center()
                 .justify_center()
                 // The image is opaque; only the letterbox area uses this alpha.
-                .bg(GpuiRgba {
-                    a: CAMERA_LETTERBOX_OPACITY,
-                    ..CAMERA_LETTERBOX_COLOR
-                })
+                .bg(CAMERA_LETTERBOX_COLOR.to_gpui(CAMERA_LETTERBOX_OPACITY))
                 .child(image)
                 .child(Toolbar)
         } else {
