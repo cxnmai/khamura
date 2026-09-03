@@ -5,8 +5,8 @@ use super::{
 use crate::theme::{CAMERA_LETTERBOX_COLOR, CAMERA_LETTERBOX_OPACITY};
 use async_channel::Receiver;
 use gpui::{
-    Context, IntoElement, ObjectFit, Render, RenderImage, Size, Task, WeakEntity, Window, div, img,
-    prelude::*, size,
+    Context, Entity, IntoElement, ObjectFit, Render, RenderImage, Size, Task, WeakEntity, Window,
+    div, img, prelude::*, size,
 };
 use image::{Frame, ImageBuffer, Rgba};
 use std::{
@@ -34,6 +34,7 @@ pub struct Camera {
     status: String,
     fit: CameraFit,
     stop_capture: Arc<AtomicBool>,
+    toolbar: Entity<Toolbar>,
     _capture_task: Task<()>,
 }
 
@@ -44,6 +45,7 @@ impl Camera {
 
         let capture_task = Self::receive_frames(cx, receiver);
         let capture_stop = Arc::clone(&stop_capture);
+        let toolbar = cx.new(Toolbar::new);
         thread::spawn(move || capture_frames(sender, capture_stop));
 
         Self {
@@ -51,6 +53,7 @@ impl Camera {
             status: "Starting camera…".into(),
             fit: CameraFit::default(),
             stop_capture,
+            toolbar,
             _capture_task: capture_task,
         }
     }
@@ -129,7 +132,7 @@ impl Render for Camera {
                 // The image is opaque; only the letterbox area uses this alpha.
                 .bg(CAMERA_LETTERBOX_COLOR.to_gpui(CAMERA_LETTERBOX_OPACITY))
                 .child(image)
-                .child(Toolbar)
+                .child(self.toolbar.clone())
         } else {
             div()
                 .size_full()
@@ -139,7 +142,7 @@ impl Render for Camera {
                 .bg(gpui::black())
                 .text_color(gpui::white())
                 .child(self.status.clone())
-                .child(Toolbar)
+                .child(self.toolbar.clone())
         }
     }
 }
