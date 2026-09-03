@@ -93,7 +93,8 @@ impl Render for Toolbar {
                     .rounded_full()
                     .flex()
                     .items_center()
-                    .justify_center()
+                    .justify_start()
+                    .pl(px(8.))
                     .bg(bar_color)
                     .child(
                         div()
