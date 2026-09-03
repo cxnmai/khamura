@@ -6,7 +6,7 @@ use gpui::{App, ClickEvent, Context, IntoElement, Render, Window, div, prelude::
 
 const BAR_WIDTH: f32 = 280.0;
 const BAR_HEIGHT: f32 = 48.0;
-const TOGGLE_WIDTH: f32 = 176.0;
+const TOGGLE_WIDTH: f32 = END_SIZE * 2.0;
 const TOGGLE_HEIGHT: f32 = 40.0;
 const RAIL_HEIGHT: f32 = 20.0;
 const END_SIZE: f32 = 40.0;
