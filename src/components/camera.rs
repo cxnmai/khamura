@@ -1,8 +1,8 @@
 use super::camera_capture::{CapturedFrame, capture_frames};
 use async_channel::Receiver;
 use gpui::{
-    Context, IntoElement, ObjectFit, Render, RenderImage, Task, WeakEntity, Window, div, img,
-    prelude::*,
+    Context, IntoElement, ObjectFit, Render, RenderImage, Size, Task, WeakEntity, Window, div, img,
+    prelude::*, size,
 };
 use image::{Frame, ImageBuffer, Rgba};
 use std::{
@@ -101,18 +101,29 @@ impl Camera {
 }
 
 impl Render for Camera {
-    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
         if let Some(frame) = self.frame.clone() {
-            let object_fit = match self.fit {
-                CameraFit::Contain => ObjectFit::Contain,
-                CameraFit::Cover => ObjectFit::Cover,
+            let image = match self.fit {
+                CameraFit::Contain => {
+                    // Size the painted image explicitly so resizing the window always leaves
+                    // the unused area outside the image as letterbox space.
+                    let image_size = contain_size(window.viewport_size(), frame.size(0));
+                    img(frame)
+                        .w(image_size.width)
+                        .h(image_size.height)
+                        .object_fit(ObjectFit::Fill)
+                }
+                CameraFit::Cover => img(frame).size_full().object_fit(ObjectFit::Cover),
             };
 
             div()
                 .size_full()
+                .flex()
+                .items_center()
+                .justify_center()
                 // The image is opaque; only the letterbox area uses this alpha.
                 .bg(gpui::black().alpha(0.7))
-                .child(img(frame).size_full().object_fit(object_fit))
+                .child(image)
         } else {
             div()
                 .size_full()
@@ -123,6 +134,20 @@ impl Render for Camera {
                 .text_color(gpui::white())
                 .child(self.status.clone())
         }
+    }
+}
+
+fn contain_size(
+    viewport: Size<gpui::Pixels>,
+    image: Size<gpui::DevicePixels>,
+) -> Size<gpui::Pixels> {
+    let image_ratio = image.width.0 as f32 / image.height.0 as f32;
+    let viewport_ratio = viewport.width / viewport.height;
+
+    if viewport_ratio > image_ratio {
+        size(viewport.height * image_ratio, viewport.height)
+    } else {
+        size(viewport.width, viewport.width / image_ratio)
     }
 }
 
