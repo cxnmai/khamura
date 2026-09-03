@@ -12,6 +12,8 @@ const TOGGLE_HEIGHT: f32 = 40.0;
 const RAIL_HEIGHT: f32 = 20.0;
 const END_SIZE: f32 = 40.0;
 const ICON_SIZE: f32 = 20.0;
+const ITEM_DARKEN_FACTOR: f32 = 0.75;
+const ITEM_PADDING: f32 = 4.0;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CameraMode {
@@ -74,6 +76,7 @@ impl Render for Toolbar {
 
         let bar_color = CAMERA_LETTERBOX_COLOR.to_gpui(1.0);
         let rail_color = gpui::Hsla::from(bar_color);
+        let item_color = darken_color(bar_color);
         let photo_color = if photo_active {
             gpui::white().opacity(0.65)
         } else if photo_selected {
@@ -111,31 +114,48 @@ impl Render for Toolbar {
         ];
         let toggle_width = END_SIZE * mode_buttons.len() as f32;
         let mode_toggle = div()
-            .relative()
-            .w(px(toggle_width))
-            .h(px(TOGGLE_HEIGHT))
+            .w(px(toggle_width + ITEM_PADDING * 2.0))
+            .h(px(BAR_HEIGHT))
+            .rounded_full()
             .flex()
             .items_center()
-            .justify_between()
+            .justify_center()
+            .bg(item_color)
             .child(
                 div()
-                    .absolute()
-                    .left(px(END_SIZE / 2.0))
-                    .right(px(END_SIZE / 2.0))
-                    .top(px((TOGGLE_HEIGHT - RAIL_HEIGHT) / 2.0))
-                    .h(px(RAIL_HEIGHT))
-                    .rounded_full()
-                    .bg(rail_color),
-            )
-            .children(mode_buttons);
+                    .relative()
+                    .w(px(toggle_width))
+                    .h(px(TOGGLE_HEIGHT))
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .child(
+                        div()
+                            .absolute()
+                            .left(px(END_SIZE / 2.0))
+                            .right(px(END_SIZE / 2.0))
+                            .top(px((TOGGLE_HEIGHT - RAIL_HEIGHT) / 2.0))
+                            .h(px(RAIL_HEIGHT))
+                            .rounded_full()
+                            .bg(rail_color),
+                    )
+                    .children(mode_buttons),
+            );
 
-        let fit_button = mode_button(
-            "fit-window",
-            rail_color,
-            contrasting_icon_color(rail_color),
-            if self.cover { MINIMIZE_2 } else { MAXIMIZE_2 },
-            cx.listener(Self::on_fit_click),
-        );
+        let fit_button = div()
+            .size(px(BAR_HEIGHT))
+            .rounded_full()
+            .flex()
+            .items_center()
+            .justify_center()
+            .bg(item_color)
+            .child(mode_button(
+                "fit-window",
+                rail_color,
+                contrasting_icon_color(rail_color),
+                if self.cover { MINIMIZE_2 } else { MAXIMIZE_2 },
+                cx.listener(Self::on_fit_click),
+            ));
 
         // Add future controls to this list; the outer pill lays them out consistently.
         let bar_elements = vec![
@@ -166,6 +186,15 @@ impl Render for Toolbar {
                     .children(bar_elements),
             )
     }
+}
+
+fn darken_color(color: gpui::Rgba) -> gpui::Hsla {
+    gpui::Hsla::from(gpui::Rgba {
+        r: color.r * ITEM_DARKEN_FACTOR,
+        g: color.g * ITEM_DARKEN_FACTOR,
+        b: color.b * ITEM_DARKEN_FACTOR,
+        a: 1.0,
+    })
 }
 
 fn contrasting_icon_color(background: gpui::Hsla) -> gpui::Hsla {
