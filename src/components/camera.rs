@@ -48,7 +48,10 @@ impl Camera {
                         match message {
                             Ok(frame) => {
                                 if let Some(image) = render_image(frame) {
-                                    camera.frame = Some(Arc::new(image));
+                                    let previous_frame = camera.frame.replace(Arc::new(image));
+                                    if let Some(previous_frame) = previous_frame {
+                                        cx.drop_image(previous_frame, None);
+                                    }
                                     camera.status.clear();
                                 }
                             }

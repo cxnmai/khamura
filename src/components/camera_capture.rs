@@ -2,7 +2,7 @@ use async_channel::Sender;
 use nokhwa::{
     Camera as NokhwaCamera,
     pixel_format::RgbFormat,
-    utils::{CameraIndex, RequestedFormat, RequestedFormatType},
+    utils::{CameraFormat, CameraIndex, RequestedFormat, RequestedFormatType},
 };
 use std::sync::{
     Arc,
@@ -20,7 +20,7 @@ pub(super) fn capture_frames(
     stop_capture: Arc<AtomicBool>,
 ) {
     let requested_format =
-        RequestedFormat::new::<RgbFormat>(RequestedFormatType::AbsoluteHighestFrameRate);
+        RequestedFormat::new::<RgbFormat>(RequestedFormatType::Closest(CameraFormat::default()));
     let mut camera = match NokhwaCamera::new(CameraIndex::default(), requested_format) {
         Ok(camera) => camera,
         Err(error) => {
