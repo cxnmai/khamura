@@ -13,9 +13,22 @@ use std::{
     thread,
 };
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CameraFit {
+    Contain,
+    Cover,
+}
+
+impl Default for CameraFit {
+    fn default() -> Self {
+        Self::Contain
+    }
+}
+
 pub struct Camera {
     frame: Option<Arc<RenderImage>>,
     status: String,
+    fit: CameraFit,
     stop_capture: Arc<AtomicBool>,
     _capture_task: Task<()>,
 }
@@ -32,6 +45,7 @@ impl Camera {
         Self {
             frame: None,
             status: "Starting camera…".into(),
+            fit: CameraFit::default(),
             stop_capture,
             _capture_task: capture_task,
         }
@@ -69,14 +83,35 @@ impl Camera {
             }
         })
     }
+
+    pub fn set_fit(&mut self, fit: CameraFit, cx: &mut Context<Self>) {
+        if self.fit != fit {
+            self.fit = fit;
+            cx.notify();
+        }
+    }
+
+    pub fn toggle_fit(&mut self, cx: &mut Context<Self>) {
+        let fit = match self.fit {
+            CameraFit::Contain => CameraFit::Cover,
+            CameraFit::Cover => CameraFit::Contain,
+        };
+        self.set_fit(fit, cx);
+    }
 }
 
 impl Render for Camera {
     fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
         if let Some(frame) = self.frame.clone() {
+            let object_fit = match self.fit {
+                CameraFit::Contain => ObjectFit::Contain,
+                CameraFit::Cover => ObjectFit::Cover,
+            };
+
             div()
                 .size_full()
-                .child(img(frame).size_full().object_fit(ObjectFit::Cover))
+                .bg(gpui::black())
+                .child(img(frame).size_full().object_fit(object_fit))
         } else {
             div()
                 .size_full()
