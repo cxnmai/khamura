@@ -4,10 +4,13 @@ use crate::{
 };
 use gpui::{App, ClickEvent, Context, IntoElement, Render, Window, div, prelude::*, px, svg};
 
-const TOOLBAR_WIDTH: f32 = 224.0;
-const TOOLBAR_HEIGHT: f32 = 56.0;
-const RAIL_HEIGHT: f32 = 28.0;
-const END_SIZE: f32 = 56.0;
+const BAR_WIDTH: f32 = 280.0;
+const BAR_HEIGHT: f32 = 48.0;
+const TOGGLE_WIDTH: f32 = 176.0;
+const TOGGLE_HEIGHT: f32 = 40.0;
+const RAIL_HEIGHT: f32 = 20.0;
+const END_SIZE: f32 = 40.0;
+const ICON_SIZE: f32 = 20.0;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CameraMode {
@@ -54,21 +57,21 @@ impl Render for Toolbar {
         let video_selected = self.selected_mode == CameraMode::Video;
         let video_active = video_selected && self.active;
 
-        let rail_color = CAMERA_LETTERBOX_COLOR.to_gpui(1.0);
-        let rail_hsla = gpui::Hsla::from(rail_color);
+        let bar_color = CAMERA_LETTERBOX_COLOR.to_gpui(1.0);
+        let rail_color = gpui::Hsla::from(bar_color);
         let photo_color = if photo_active {
             gpui::white().opacity(0.65)
         } else if photo_selected {
             gpui::white()
         } else {
-            rail_hsla
+            rail_color
         };
         let video_color = if video_active {
             gpui::red()
         } else if video_selected {
             gpui::red().opacity(0.65)
         } else {
-            rail_hsla
+            rail_color
         };
         let muted_icon = gpui::white().opacity(0.55);
 
@@ -77,50 +80,61 @@ impl Render for Toolbar {
             .bottom(px(24.))
             .left_0()
             .right_0()
-            .h(px(TOOLBAR_HEIGHT))
+            .h(px(BAR_HEIGHT))
             .flex()
             .items_center()
             .justify_center()
+            // The toolbar remains the outer pill; the photo/video toggle is its first element.
             .child(
                 div()
-                    .relative()
-                    .w(px(TOOLBAR_WIDTH))
-                    .h(px(TOOLBAR_HEIGHT))
+                    .w(px(BAR_WIDTH))
+                    .h(px(BAR_HEIGHT))
+                    .rounded_full()
                     .flex()
                     .items_center()
-                    .justify_between()
+                    .justify_center()
+                    .bg(bar_color)
                     .child(
                         div()
-                            .absolute()
-                            .left(px(END_SIZE / 2.0))
-                            .right(px(END_SIZE / 2.0))
-                            .top(px((TOOLBAR_HEIGHT - RAIL_HEIGHT) / 2.0))
-                            .h(px(RAIL_HEIGHT))
-                            .rounded_full()
-                            .bg(rail_color),
-                    )
-                    .child(mode_button(
-                        "photo-mode",
-                        photo_color,
-                        if photo_selected {
-                            gpui::black()
-                        } else {
-                            muted_icon
-                        },
-                        APERTURE,
-                        cx.listener(Self::on_photo_click),
-                    ))
-                    .child(mode_button(
-                        "video-mode",
-                        video_color,
-                        if video_selected {
-                            gpui::white()
-                        } else {
-                            muted_icon
-                        },
-                        if video_active { CIRCLE_STOP } else { VIDEO },
-                        cx.listener(Self::on_video_click),
-                    )),
+                            .relative()
+                            .w(px(TOGGLE_WIDTH))
+                            .h(px(TOGGLE_HEIGHT))
+                            .flex()
+                            .items_center()
+                            .justify_between()
+                            .child(
+                                div()
+                                    .absolute()
+                                    .left(px(END_SIZE / 2.0))
+                                    .right(px(END_SIZE / 2.0))
+                                    .top(px((TOGGLE_HEIGHT - RAIL_HEIGHT) / 2.0))
+                                    .h(px(RAIL_HEIGHT))
+                                    .rounded_full()
+                                    .bg(rail_color),
+                            )
+                            .child(mode_button(
+                                "photo-mode",
+                                photo_color,
+                                if photo_selected {
+                                    gpui::black()
+                                } else {
+                                    muted_icon
+                                },
+                                APERTURE,
+                                cx.listener(Self::on_photo_click),
+                            ))
+                            .child(mode_button(
+                                "video-mode",
+                                video_color,
+                                if video_selected {
+                                    gpui::white()
+                                } else {
+                                    muted_icon
+                                },
+                                if video_active { CIRCLE_STOP } else { VIDEO },
+                                cx.listener(Self::on_video_click),
+                            )),
+                    ),
             )
     }
 }
@@ -141,5 +155,10 @@ fn mode_button(
         .justify_center()
         .bg(background)
         .on_click(on_click)
-        .child(svg().size(px(24.)).path(icon_path).text_color(icon_color))
+        .child(
+            svg()
+                .size(px(ICON_SIZE))
+                .path(icon_path)
+                .text_color(icon_color),
+        )
 }
