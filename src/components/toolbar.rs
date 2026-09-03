@@ -6,7 +6,6 @@ use gpui::{App, ClickEvent, Context, IntoElement, Render, Window, div, prelude::
 
 const BAR_WIDTH: f32 = 280.0;
 const BAR_HEIGHT: f32 = 48.0;
-const TOGGLE_WIDTH: f32 = END_SIZE * 2.0;
 const TOGGLE_HEIGHT: f32 = 40.0;
 const RAIL_HEIGHT: f32 = 20.0;
 const END_SIZE: f32 = 40.0;
@@ -76,6 +75,47 @@ impl Render for Toolbar {
         let photo_icon = contrasting_icon_color(photo_color);
         let video_icon = contrasting_icon_color(video_color);
 
+        let mode_buttons = vec![
+            mode_button(
+                "photo-mode",
+                photo_color,
+                photo_icon,
+                APERTURE,
+                cx.listener(Self::on_photo_click),
+            )
+            .into_any_element(),
+            mode_button(
+                "video-mode",
+                video_color,
+                video_icon,
+                if video_active { CIRCLE_STOP } else { VIDEO },
+                cx.listener(Self::on_video_click),
+            )
+            .into_any_element(),
+        ];
+        let toggle_width = END_SIZE * mode_buttons.len() as f32;
+        let mode_toggle = div()
+            .relative()
+            .w(px(toggle_width))
+            .h(px(TOGGLE_HEIGHT))
+            .flex()
+            .items_center()
+            .justify_between()
+            .child(
+                div()
+                    .absolute()
+                    .left(px(END_SIZE / 2.0))
+                    .right(px(END_SIZE / 2.0))
+                    .top(px((TOGGLE_HEIGHT - RAIL_HEIGHT) / 2.0))
+                    .h(px(RAIL_HEIGHT))
+                    .rounded_full()
+                    .bg(rail_color),
+            )
+            .children(mode_buttons);
+
+        // Add future controls to this list; the outer pill lays them out consistently.
+        let bar_elements = vec![mode_toggle.into_any_element()];
+
         div()
             .absolute()
             .bottom(px(24.))
@@ -85,7 +125,6 @@ impl Render for Toolbar {
             .flex()
             .items_center()
             .justify_center()
-            // The toolbar remains the outer pill; the photo/video toggle is its first element.
             .child(
                 div()
                     .w(px(BAR_WIDTH))
@@ -94,41 +133,10 @@ impl Render for Toolbar {
                     .flex()
                     .items_center()
                     .justify_start()
+                    .gap(px(8.))
                     .pl(px(8.))
                     .bg(bar_color)
-                    .child(
-                        div()
-                            .relative()
-                            .w(px(TOGGLE_WIDTH))
-                            .h(px(TOGGLE_HEIGHT))
-                            .flex()
-                            .items_center()
-                            .justify_between()
-                            .child(
-                                div()
-                                    .absolute()
-                                    .left(px(END_SIZE / 2.0))
-                                    .right(px(END_SIZE / 2.0))
-                                    .top(px((TOGGLE_HEIGHT - RAIL_HEIGHT) / 2.0))
-                                    .h(px(RAIL_HEIGHT))
-                                    .rounded_full()
-                                    .bg(rail_color),
-                            )
-                            .child(mode_button(
-                                "photo-mode",
-                                photo_color,
-                                photo_icon,
-                                APERTURE,
-                                cx.listener(Self::on_photo_click),
-                            ))
-                            .child(mode_button(
-                                "video-mode",
-                                video_color,
-                                video_icon,
-                                if video_active { CIRCLE_STOP } else { VIDEO },
-                                cx.listener(Self::on_video_click),
-                            )),
-                    ),
+                    .children(bar_elements),
             )
     }
 }
