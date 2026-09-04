@@ -39,12 +39,7 @@ impl Render for OpacitySlider {
         let settings = cx.global::<SessionSettings>();
         let opacity = settings.background_opacity;
         let color = settings.theme_color;
-        let ink = if color.r as f32 * 0.299 + color.g as f32 * 0.587 + color.b as f32 * 0.114 > 150.
-        {
-            gpui::black()
-        } else {
-            gpui::white()
-        };
+        let ink = super::settings::foreground(color);
         let bounds = self.bounds.clone();
         let entity = cx.entity().downgrade();
         div()

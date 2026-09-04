@@ -33,6 +33,7 @@ impl Render for Settings {
         let settings = cx.global::<SessionSettings>();
         let selected_fit = settings.fit;
         let selected_color = settings.theme_color;
+        let opacity = settings.background_opacity;
         let foreground = foreground(selected_color);
         let fits = [
             ("preview-fit", "Fit", CameraFit::Contain),
@@ -130,7 +131,20 @@ impl Render for Settings {
                         },
                     ))),
             )
-            .child(self.opacity.clone())
+            .child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap(px(4.))
+                    .child(
+                        div()
+                            .flex()
+                            .justify_between()
+                            .child("Background opacity")
+                            .child(format!("{:.0}%", opacity * 100.)),
+                    )
+                    .child(self.opacity.clone()),
+            )
             .child(
                 div()
                     .text_xs()
