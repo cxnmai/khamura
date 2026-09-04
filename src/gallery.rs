@@ -19,6 +19,7 @@ pub struct GalleryStore {
     pub loading: bool,
     pub error: Option<String>,
     revision: u64,
+    directory: Option<PathBuf>,
 }
 
 impl gpui::Global for GalleryStore {}
@@ -29,9 +30,21 @@ impl GalleryStore {
         Self::refresh(cx);
     }
 
+    fn clear_images(&mut self, cx: &mut App) {
+        for item in self.items.drain(..) {
+            if let Some(image) = item.thumbnail {
+                cx.drop_image(image, None);
+            }
+        }
+    }
+
     pub fn refresh(cx: &mut App) {
         let directory = cx.global::<Config>().photo_directory.clone();
-        let revision = cx.update_global::<Self, _>(|store, _| {
+        let revision = cx.update_global::<Self, _>(|store, cx| {
+            if store.directory.as_ref() != Some(&directory) {
+                store.clear_images(cx);
+                store.directory = Some(directory.clone());
+            }
             store.revision += 1;
             store.loading = true;
             store.error = None;
@@ -43,15 +56,15 @@ impl GalleryStore {
         cx.spawn(async move |cx| {
             let result = query.await;
             let _ = cx.update(|cx| {
-                cx.update_global::<Self, _>(|store, _| {
+                cx.update_global::<Self, _>(|store, cx| {
                     if revision != store.revision {
                         return;
                     }
                     store.loading = false;
+                    store.clear_images(cx);
                     match result {
                         Ok(items) => store.items = items,
                         Err(error) => {
-                            store.items.clear();
                             store.error = Some(error);
                         }
                     }
