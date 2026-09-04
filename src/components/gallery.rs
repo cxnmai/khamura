@@ -65,6 +65,9 @@ impl Gallery {
                 Some(cx.new(|cx| super::video_player::VideoPlayer::new(path.clone(), cx)));
         }
         self.selected = Some(path);
+        // The clicked grid tile disappears in the focused view. Move keyboard
+        // focus to the persistent gallery root instead of leaving it on that tile.
+        self.focus_pending = true;
         self.options_open = false;
         self.action_notice = None;
         cx.notify();
@@ -81,6 +84,8 @@ impl Gallery {
         self.action_notice = None;
         if self.selected.take().is_none() {
             cx.emit(GalleryDismissed);
+        } else {
+            self.focus_pending = true;
         }
         cx.notify();
     }
