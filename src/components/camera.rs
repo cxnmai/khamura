@@ -81,11 +81,13 @@ impl Camera {
             .child(
                 div()
                     .absolute()
+                    .top(px(16.))
                     .bottom(px(84.))
                     .left_0()
                     .right_0()
                     .flex()
                     .justify_center()
+                    .items_end()
                     .child(self.settings.clone()),
             )
     }

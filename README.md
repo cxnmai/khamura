@@ -2,6 +2,17 @@
 
 A Linux desktop camera app built with Rust and GPUI.
 
+## Settings
+
+Click the sliders button on the toolbar to open settings above it. Choose Fit or
+Fill for the preview, pick a theme swatch, or drag the background-opacity slider
+to adjust the letterboxing. Changes apply immediately while the camera keeps
+running. The toolbar and settings panel remain opaque.
+
+Press Escape, click outside the panel, or click the sliders button again to close
+it. These controls only change the current session; they do not write the config
+file. Restarting restores the configured appearance and the default Fit mode.
+
 ## Configuration
 
 Optionally create `~/.config/khamura/config.toml`:
