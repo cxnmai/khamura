@@ -70,6 +70,17 @@ theme_color = "#000000"
 background_opacity = 0.7
 preview_fit = "contain"
 mirror = true
+
+[capture]
+mode = "photo"
+timer_seconds = 0
+aspect = "native"
+grid = false
+microphone_on = true
+# Omit these to use the default devices and native camera quality:
+# camera_device = "/dev/video0"
+# microphone_device = "alsa_input.example"
+# quality = { width = 1920, height = 1080, fps = 30 }
 ```
 
 All settings are optional; the example shows the defaults. Settings are loaded
@@ -89,6 +100,18 @@ stderr and prevent startup.
 - `mirror`: boolean, defaults to `true`. Set to `false` for an unmirrored live
   preview and saved media, or change it immediately with the settings toggle.
 
+The optional `[capture]` table persists toolbar and device preferences:
+- `mode`: `"photo"` or `"video"`.
+- `timer_seconds`: `0`, `3`, or `10`.
+- `aspect`: `"native"`, `"four_three"`, `"sixteen_nine"`, or `"square"`.
+- `grid`: show composition guides (boolean).
+- `microphone_on`: include microphone audio in video (boolean, default `true`).
+- `camera_device`: camera device path; omit for the default camera.
+- `microphone_device`: PulseAudio source name, not its display label; omit for
+  the default source. The settings dropdown writes the correct name.
+- `quality`: a table with positive `width`, `height`, and `fps` values. Omit for
+  native quality; use the toolbar to select a format supported by the camera.
+
 The default config path is relative to `HOME`; `XDG_CONFIG_HOME` is not used.
 After relocating the config, `~/.config/khamura/config-path` records its absolute
 location so the app can find it on restart. Keep that locator file in place;
@@ -98,6 +121,13 @@ and its parent directory if needed. Saves preserve existing comments and
 `photo_directory`, and replace the file atomically rather than truncating it.
 
 ## Development
+
+Video recording requires `ffmpeg` with H.264/AAC encoding and PulseAudio input;
+microphone discovery requires `pactl`. Audio works with PulseAudio or PipeWire's
+PulseAudio compatibility service. The Nix development environment supplies
+`ffmpeg-full` and `pulseaudio`; run inside it, or install equivalent binaries
+on your system and make them available on `PATH`.
+
 
 ```sh
 nix develop
