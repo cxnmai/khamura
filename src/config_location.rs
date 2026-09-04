@@ -42,6 +42,9 @@ pub(crate) fn relocate(config: &Config, home: &Path, target: &Path) -> Result<()
     if target == marker(home) {
         return Err("configuration cannot replace the location marker".into());
     }
+    if fs::symlink_metadata(config.path()).is_ok_and(|metadata| metadata.file_type().is_symlink()) {
+        return Err("cannot relocate a symlinked configuration; choose a regular file first".into());
+    }
     let text = match fs::read_to_string(config.path()) {
         Ok(text) => {
             Config::parse(&text, home)?;
