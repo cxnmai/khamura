@@ -2,15 +2,13 @@
 mod controls;
 #[path = "toolbar_style.rs"]
 mod style;
-use style::*;
 use crate::{
+    capture_settings::{CameraMode, CaptureSettings},
     icons::{APERTURE, CIRCLE_STOP, SLIDERS_HORIZONTAL, VIDEO},
     session_settings::SessionSettings,
-    capture_settings::{CaptureSettings, CameraMode},
 };
-use gpui::{
-    ClickEvent, Context, EventEmitter, IntoElement, Render, Window, div, prelude::*, px,
-};
+use gpui::{ClickEvent, Context, EventEmitter, IntoElement, Render, Window, div, prelude::*, px};
+use style::*;
 
 pub const BAR_WIDTH: f32 = 420.0;
 const BAR_HEIGHT: f32 = 48.0;
@@ -33,7 +31,8 @@ impl Toolbar {
     pub fn new(cx: &mut Context<Self>) -> Self {
         cx.observe_global::<SessionSettings>(|_, cx| cx.notify())
             .detach();
-        cx.observe_global::<CaptureSettings>(|_, cx| cx.notify()).detach();
+        cx.observe_global::<CaptureSettings>(|_, cx| cx.notify())
+            .detach();
         Self {
             controls: cx.new(controls::ToolbarControls::new),
             settings_open: false,
@@ -184,4 +183,3 @@ impl Render for Toolbar {
             )
     }
 }
-

@@ -1,4 +1,4 @@
-use gpui::{prelude::*, App, ClickEvent, IntoElement, Window, div, px, svg};
+use gpui::{App, ClickEvent, IntoElement, Window, div, prelude::*, px, svg};
 const WELL_DARKEN_FACTOR: f32 = 0.75;
 const END_SIZE: f32 = 40.;
 const ACTIVE_CIRCLE_SIZE: f32 = 32.;
