@@ -222,3 +222,7 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+#[path = "gallery_cache_tests.rs"]
+mod cache_tests;
