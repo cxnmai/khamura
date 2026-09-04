@@ -94,3 +94,41 @@ pub(crate) fn save_output(path: &Path, home: &Path, output: &Path) -> Result<(),
     set(&mut document, "photo_directory", Value::from(output));
     write_atomic(path, &document.to_string())
 }
+
+/// Only replace capture keys; retain appearance, paths, and unrelated comments.
+pub(crate) fn save_capture(
+    path: &Path,
+    home: &Path,
+    preferences: &crate::capture_settings::CapturePreferences,
+) -> Result<(), String> {
+    preferences.validate()?;
+    let original = match fs::read_to_string(path) {
+        Ok(text) => text,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
+        Err(error) => return Err(error.to_string()),
+    };
+    Config::parse(&original, home)?;
+    let mut document = original.parse::<DocumentMut>().map_err(|error| error.to_string())?;
+    let serialized = toml::to_string(preferences).map_err(|error| error.to_string())?;
+    let capture = serialized.parse::<DocumentMut>().map_err(|error| error.to_string())?;
+    if document.get("capture").is_none() {
+        document["capture"] = toml_edit::Item::Table(toml_edit::Table::new());
+    }
+    let table = document["capture"].as_table_like_mut().ok_or("capture must be a table")?;
+    for key in ["quality", "camera_device", "microphone_device"] {
+        if !capture.contains_key(key) { table.remove(key); }
+    }
+    for (key, item) in capture.iter() {
+        let mut replacement = item.clone();
+        if let (Some(previous), Some(next)) = (
+            table.get(key).and_then(|v| v.as_value()),
+            replacement.as_value_mut(),
+        ) {
+            *next.decor_mut() = previous.decor().clone();
+        }
+        table.insert(key, replacement);
+    }
+    let updated = document.to_string();
+    Config::parse(&updated, home)?;
+    write_atomic(path, &updated)
+}

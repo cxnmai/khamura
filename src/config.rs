@@ -10,6 +10,7 @@ use std::{
 pub struct Config {
     path: PathBuf,
     home: PathBuf,
+    pub capture: crate::capture_settings::CapturePreferences,
     pub preview_fit: CameraFit,
     pub mirror: bool,
     pub photo_directory: PathBuf,
@@ -22,6 +23,7 @@ impl gpui::Global for Config {}
 #[derive(Default, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 struct FileConfig {
+    capture: crate::capture_settings::CapturePreferences,
     preview_fit: Option<CameraFit>,
     mirror: Option<bool>,
     photo_directory: Option<String>,
@@ -73,6 +75,11 @@ impl Config {
         Ok(())
     }
 
+    pub fn save_capture(&self, preferences: &crate::capture_settings::CapturePreferences) -> Result<(), String> {
+        crate::config_store::save_capture(&self.path, &self.home, preferences)
+            .map_err(|error| format!("{}: {error}", self.path.display()))
+    }
+
     pub fn save_preferences(
         &self,
         fit: CameraFit,
@@ -86,6 +93,7 @@ impl Config {
 
     pub(crate) fn parse(text: &str, home: &Path) -> Result<Self, String> {
         let raw: FileConfig = toml::from_str(text).map_err(|error| error.to_string())?;
+        raw.capture.validate()?;
         let photo_directory = match raw.photo_directory.as_deref() {
             None => home.join("Pictures/khamura"),
             Some("~") => home.to_path_buf(),
@@ -106,6 +114,7 @@ impl Config {
         Ok(Self {
             path: home.join(".config/khamura/config.toml"),
             home: home.to_path_buf(),
+            capture: raw.capture,
             preview_fit: raw.preview_fit.unwrap_or_default(),
             mirror: raw.mirror.unwrap_or(true),
             photo_directory,

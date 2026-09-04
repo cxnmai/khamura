@@ -82,7 +82,8 @@ pub(crate) fn relocate(config: &Config, home: &Path, target: &Path) -> Result<()
             document["theme_color"] =
                 toml_edit::value(format!("#{:02x}{:02x}{:02x}", color.r, color.g, color.b));
             document["background_opacity"] = toml_edit::value(config.background_opacity as f64);
-            document.to_string()
+            let capture = toml::to_string(&config.capture).map_err(|error| error.to_string())?;
+            format!("{}\n[capture]\n{capture}", document)
         }
         Err(error) => return Err(error.to_string()),
     };
