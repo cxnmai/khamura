@@ -55,7 +55,11 @@ impl Render for Settings {
                     cx.stop_propagation();
                 }
             }))
+            .occlude()
             .w(px(280.))
+            .max_w_full()
+            .max_h_full()
+            .overflow_y_scroll()
             .p(px(16.))
             .rounded(px(20.))
             .border_1()
