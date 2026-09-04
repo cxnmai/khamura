@@ -100,3 +100,39 @@ fn probe(device: &std::path::Path, width: u32, height: u32, deadline: Instant) -
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn software_keeps_quality_and_limits_threads() {
+        let mut command = Command::new("ffmpeg");
+        input(&mut command, None);
+        output(&mut command, false, false);
+        let args: Vec<_> = command
+            .get_args()
+            .map(|arg| arg.to_str().unwrap())
+            .collect();
+        assert!(args.windows(2).any(|pair| pair == ["-filter_threads", "2"]));
+        assert!(args.windows(2).any(|pair| pair == ["-threads:v", "4"]));
+        assert!(args.windows(2).any(|pair| pair == ["-crf", "20"]));
+        assert!(
+            !args
+                .iter()
+                .any(|arg| arg.contains("hwupload") || arg.contains("hflip"))
+        );
+    }
+
+    #[test]
+    fn hardware_preserves_mirror_and_even_padding_before_upload() {
+        let mut command = Command::new("ffmpeg");
+        output(&mut command, true, true);
+        let args: Vec<_> = command
+            .get_args()
+            .map(|arg| arg.to_str().unwrap())
+            .collect();
+        assert!(args.contains(&"hflip,pad=ceil(iw/2)*2:ceil(ih/2)*2,format=nv12,hwupload"));
+        assert!(args.windows(2).any(|pair| pair == ["-c:v", "h264_vaapi"]));
+    }
+}
