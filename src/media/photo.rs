@@ -4,7 +4,19 @@ use std::path::{Path, PathBuf};
 
 /// Input is the BGRA byte layout consumed by GPUI; output is conventional RGBA.
 pub fn photo_pixels(source: &RgbaImage, mirror: bool, aspect: PhotoAspect) -> RgbaImage {
-    let (width, height) = source.dimensions();
+    let (x, y, w, h) = crop_bounds(source.width(), source.height(), aspect);
+    let mut pixels = image::imageops::crop_imm(source, x, y, w, h).to_image();
+    if mirror {
+        image::imageops::flip_horizontal_in_place(&mut pixels);
+    }
+    for pixel in pixels.pixels_mut() {
+        pixel.0.swap(0, 2);
+    }
+    pixels
+}
+
+/// Centered crop shared by preview and PNG capture. Dimensions must be nonzero.
+pub fn crop_bounds(width: u32, height: u32, aspect: PhotoAspect) -> (u32, u32, u32, u32) {
     let ratio = match aspect {
         PhotoAspect::Native => None,
         PhotoAspect::FourThree => Some((4, 3)),
@@ -18,24 +30,27 @@ pub fn photo_pixels(source: &RgbaImage, mirror: bool, aspect: PhotoAspect) -> Rg
             (width, ((u64::from(width) * y / x) as u32).max(1))
         }
     });
-    let mut pixels = image::imageops::crop_imm(source, (width - w) / 2, (height - h) / 2, w, h).to_image();
-    if mirror {
-        image::imageops::flip_horizontal_in_place(&mut pixels);
-    }
-    for pixel in pixels.pixels_mut() {
-        pixel.0.swap(0, 2);
-    }
-    pixels
+    ((width - w) / 2, (height - h) / 2, w, h)
 }
 
-pub fn save_photo(output: &Path, source: &RgbaImage, mirror: bool, aspect: PhotoAspect) -> Result<PathBuf, String> {
+pub fn save_photo(
+    output: &Path,
+    source: &RgbaImage,
+    mirror: bool,
+    aspect: PhotoAspect,
+) -> Result<PathBuf, String> {
     if source.width() == 0 || source.height() == 0 {
         return Err("Camera returned an empty image".into());
     }
     let pixels = photo_pixels(source, mirror, aspect);
     let (mut temporary, destination) = super::destination(output, "png")?;
     image::codecs::png::PngEncoder::new(temporary.as_file_mut())
-        .write_image(pixels.as_raw(), pixels.width(), pixels.height(), image::ExtendedColorType::Rgba8)
+        .write_image(
+            pixels.as_raw(),
+            pixels.width(),
+            pixels.height(),
+            image::ExtendedColorType::Rgba8,
+        )
         .map_err(|e| format!("Cannot encode photo: {e}"))?;
     super::publish(temporary, destination)
 }
