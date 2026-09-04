@@ -11,6 +11,7 @@ pub struct Config {
     path: PathBuf,
     home: PathBuf,
     pub preview_fit: CameraFit,
+    pub mirror: bool,
     pub photo_directory: PathBuf,
     pub theme_color: Rgb,
     pub background_opacity: f32,
@@ -22,6 +23,7 @@ impl gpui::Global for Config {}
 #[serde(default, deny_unknown_fields)]
 struct FileConfig {
     preview_fit: Option<CameraFit>,
+    mirror: Option<bool>,
     photo_directory: Option<String>,
     theme_color: Option<String>,
     background_opacity: Option<f32>,
@@ -71,8 +73,14 @@ impl Config {
         Ok(())
     }
 
-    pub fn save_preferences(&self, fit: CameraFit, color: Rgb, opacity: f32) -> Result<(), String> {
-        crate::config_store::save(&self.path, &self.home, fit, color, opacity)
+    pub fn save_preferences(
+        &self,
+        fit: CameraFit,
+        color: Rgb,
+        opacity: f32,
+        mirror: bool,
+    ) -> Result<(), String> {
+        crate::config_store::save(&self.path, &self.home, fit, color, opacity, mirror)
             .map_err(|error| format!("{}: {error}", self.path.display()))
     }
 
@@ -99,6 +107,7 @@ impl Config {
             path: home.join(".config/khamura/config.toml"),
             home: home.to_path_buf(),
             preview_fit: raw.preview_fit.unwrap_or_default(),
+            mirror: raw.mirror.unwrap_or(true),
             photo_directory,
             theme_color,
             background_opacity,
@@ -130,6 +139,8 @@ mod tests {
         assert_eq!(config.photo_directory, home.join("Pictures/khamura"));
         assert_eq!(config.theme_color, CAMERA_LETTERBOX_COLOR);
         assert_eq!(config.background_opacity, CAMERA_LETTERBOX_OPACITY);
+        assert!(config.mirror);
+        assert!(!Config::parse("mirror = false", home).unwrap().mirror);
         let config = Config::parse(
             "photo_directory = '~/Photos'\ntheme_color = '#034d70'\nbackground_opacity = 0.25",
             home,
@@ -156,6 +167,7 @@ mod tests {
             "photo_directory = ''",
             "photo_directory = 'relative'",
             "unknown = true",
+            "mirror = 'false'",
             "not toml",
         ] {
             assert!(

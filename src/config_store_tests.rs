@@ -12,7 +12,7 @@ fn preferences_roundtrip_and_preserve_manual_settings() {
     .unwrap();
     let config = Config::parse(&fs::read_to_string(&path).unwrap(), home.path()).unwrap();
     config
-        .save_preferences(CameraFit::Cover, Rgb::new(46, 52, 64), 0.35)
+        .save_preferences(CameraFit::Cover, Rgb::new(46, 52, 64), 0.35, false)
         .unwrap();
     let text = fs::read_to_string(&path).unwrap();
     assert!(text.contains("# My camera"));
@@ -22,13 +22,16 @@ fn preferences_roundtrip_and_preserve_manual_settings() {
     assert_eq!(reloaded.preview_fit, CameraFit::Cover);
     assert_eq!(reloaded.theme_color, Rgb::new(46, 52, 64));
     assert_eq!(reloaded.background_opacity, 0.35);
+    assert!(!reloaded.mirror);
     assert_eq!(reloaded.photo_directory, home.path().join("Photos"));
     // Simulate an external edit after startup.
     fs::write(&path, text.replace("~/Photos", "~/NewPhotos")).unwrap();
     config
-        .save_preferences(CameraFit::Contain, Rgb::new(255, 255, 255), 1.0)
+        .save_preferences(CameraFit::Contain, Rgb::new(255, 255, 255), 1.0, true)
         .unwrap();
-    assert!(fs::read_to_string(&path).unwrap().contains("~/NewPhotos"));
+    let saved = fs::read_to_string(&path).unwrap();
+    assert!(saved.contains("~/NewPhotos"));
+    assert!(Config::parse(&saved, home.path()).unwrap().mirror);
 }
 
 #[test]
@@ -38,13 +41,13 @@ fn first_save_creates_directory_and_invalid_updates_leave_file_untouched() {
     let config = Config::parse("", home.path()).unwrap();
     assert_eq!(config.preview_fit, CameraFit::Contain);
     config
-        .save_preferences(CameraFit::Cover, Rgb::new(0, 0, 0), 0.7)
+        .save_preferences(CameraFit::Cover, Rgb::new(0, 0, 0), 0.7, true)
         .unwrap();
     let original = fs::read_to_string(&path).unwrap();
     for opacity in [f32::NAN, -0.1, 1.1] {
         assert!(
             config
-                .save_preferences(CameraFit::Cover, Rgb::new(1, 2, 3), opacity)
+                .save_preferences(CameraFit::Cover, Rgb::new(1, 2, 3), opacity, true)
                 .is_err()
         );
         assert_eq!(fs::read_to_string(&path).unwrap(), original);
@@ -57,7 +60,7 @@ fn first_save_creates_directory_and_invalid_updates_leave_file_untouched() {
         fs::write(&path, invalid).unwrap();
         assert!(
             config
-                .save_preferences(CameraFit::Cover, Rgb::new(1, 2, 3), 0.5)
+                .save_preferences(CameraFit::Cover, Rgb::new(1, 2, 3), 0.5, true)
                 .is_err()
         );
         assert_eq!(fs::read_to_string(&path).unwrap(), invalid);
@@ -73,7 +76,7 @@ fn directory_creation_failure_does_not_replace_obstacle() {
     let config = Config::parse("", home.path()).unwrap();
     assert!(
         config
-            .save_preferences(CameraFit::Cover, Rgb::new(1, 2, 3), 0.5)
+            .save_preferences(CameraFit::Cover, Rgb::new(1, 2, 3), 0.5, true)
             .is_err()
     );
     assert_eq!(fs::read_to_string(obstacle).unwrap(), "not a directory");

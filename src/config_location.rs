@@ -77,6 +77,7 @@ pub(crate) fn relocate(config: &Config, home: &Path, target: &Path) -> Result<()
                 crate::session_settings::CameraFit::Contain => "contain",
                 crate::session_settings::CameraFit::Cover => "cover",
             });
+            document["mirror"] = toml_edit::value(config.mirror);
             let color = config.theme_color;
             document["theme_color"] =
                 toml_edit::value(format!("#{:02x}{:02x}{:02x}", color.r, color.g, color.b));

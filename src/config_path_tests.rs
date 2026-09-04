@@ -29,7 +29,7 @@ fn relocation_preserves_latest_preferences_and_restart_location() {
     let home = tempfile::tempdir().unwrap();
     let mut config = Config::load_from_home(home.path()).unwrap();
     config
-        .save_preferences(CameraFit::Cover, Rgb::new(1, 2, 3), 0.5)
+        .save_preferences(CameraFit::Cover, Rgb::new(1, 2, 3), 0.5, false)
         .unwrap();
     let original_path = config.path().to_path_buf();
     let original = format!(
@@ -44,6 +44,7 @@ fn relocation_preserves_latest_preferences_and_restart_location() {
     let reloaded = Config::load_from_home(home.path()).unwrap();
     assert_eq!(reloaded.path(), target);
     assert_eq!(reloaded.preview_fit, CameraFit::Cover);
+    assert!(!reloaded.mirror);
     assert_eq!(reloaded.theme_color, Rgb::new(1, 2, 3));
     config.relocate(&target).unwrap();
 }
@@ -53,7 +54,7 @@ fn relocation_failure_preserves_original_and_in_memory_path() {
     let home = tempfile::tempdir().unwrap();
     let mut config = Config::load_from_home(home.path()).unwrap();
     config
-        .save_preferences(CameraFit::Cover, Rgb::new(1, 2, 3), 0.5)
+        .save_preferences(CameraFit::Cover, Rgb::new(1, 2, 3), 0.5, false)
         .unwrap();
     let old = config.path().to_path_buf();
     let original = fs::read_to_string(&old).unwrap();
@@ -78,6 +79,8 @@ fn missing_config_materializes_and_bad_markers_do_not_use_defaults() {
     config.relocate(&target).unwrap();
     let reloaded = Config::load_from_home(home.path()).unwrap();
     assert_eq!(reloaded.photo_directory, config.photo_directory);
+    assert!(reloaded.mirror);
+    assert!(fs::read_to_string(&target).unwrap().contains("mirror = true"));
     assert!(
         fs::read_to_string(&target)
             .unwrap()

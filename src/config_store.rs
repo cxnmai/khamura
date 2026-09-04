@@ -9,6 +9,7 @@ pub(crate) fn save(
     fit: CameraFit,
     color: Rgb,
     opacity: f32,
+    mirror: bool,
 ) -> Result<(), String> {
     if !opacity.is_finite() || !(0.0..=1.0).contains(&opacity) {
         return Err("background_opacity must be between 0.0 and 1.0".into());
@@ -41,6 +42,7 @@ pub(crate) fn save(
         "background_opacity",
         Value::from(opacity as f64),
     );
+    set(&mut document, "mirror", Value::from(mirror));
     let updated = document.to_string();
     Config::parse(&updated, home)?;
     write_atomic(path, &updated)
