@@ -132,6 +132,7 @@ impl DeviceSettings {
                         .border_color(ink.opacity(0.2))
                         .children(options.into_iter().enumerate().map(|(index, (id, label))| {
                             let chosen = &id == selected;
+                            let keyboard_id = id.clone();
                             div()
                                 .id((
                                     if camera {
@@ -153,6 +154,16 @@ impl DeviceSettings {
                                 .on_click(cx.listener(move |this, _, _, cx| {
                                     this.select(camera, id.clone(), cx);
                                 }))
+                                .on_key_down(cx.listener(
+                                    move |this, event: &gpui::KeyDownEvent, _, cx| {
+                                        if event.keystroke.key == "enter"
+                                            || event.keystroke.key == "space"
+                                        {
+                                            this.select(camera, keyboard_id.clone(), cx);
+                                            cx.stop_propagation();
+                                        }
+                                    },
+                                ))
                         })),
                 )
             })
