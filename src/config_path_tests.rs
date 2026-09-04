@@ -88,3 +88,27 @@ fn missing_config_materializes_and_bad_markers_do_not_use_defaults() {
     fs::write(home.path().join(".config/khamura/config-path"), "relative").unwrap();
     assert!(Config::load_from_home(home.path()).is_err());
 }
+
+#[cfg(unix)]
+#[test]
+fn rejects_marker_aliases_and_symlink_sources() {
+    use std::os::unix::fs::symlink;
+    let home = tempfile::tempdir().unwrap();
+    let mut config = Config::load_from_home(home.path()).unwrap();
+    let directory = home.path().join(".config/khamura");
+    fs::create_dir_all(&directory).unwrap();
+    let alias = home.path().join("alias");
+    symlink(&directory, &alias).unwrap();
+    assert!(config.relocate(&alias.join("config-path")).is_err());
+    assert!(!directory.join("config-path").exists());
+    let external = home.path().join("external.toml");
+    fs::write(&external, "# managed externally").unwrap();
+    symlink(&external, config.path()).unwrap();
+    assert!(config.relocate(&home.path().join("new.toml")).is_err());
+    assert_eq!(
+        fs::read_to_string(external).unwrap(),
+        "# managed externally"
+    );
+    symlink(home.path().join("missing"), directory.join("config-path")).unwrap();
+    assert!(Config::load_from_home(home.path()).is_err());
+}

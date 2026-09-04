@@ -24,7 +24,10 @@ pub(crate) fn resolve(home: &Path) -> Result<(PathBuf, bool), String> {
             }
             Ok((path, true))
         }
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+        Err(error)
+            if error.kind() == std::io::ErrorKind::NotFound
+                && fs::symlink_metadata(&marker).is_err() =>
+        {
             Ok((home.join(".config/khamura/config.toml"), false))
         }
         Err(error) => Err(format!("{}: {error}", marker.display())),
