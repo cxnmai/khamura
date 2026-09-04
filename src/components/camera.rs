@@ -1,5 +1,6 @@
 mod actions;
 mod overlays;
+mod error_popup;
 mod stream;
 mod view;
 
