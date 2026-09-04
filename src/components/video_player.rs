@@ -6,6 +6,8 @@ use std::{
 };
 #[path = "video_decode.rs"]
 mod decode;
+#[path = "video_process.rs"]
+mod process;
 
 pub struct VideoPlayer {
     path: PathBuf,
@@ -64,6 +66,14 @@ impl VideoPlayer {
         });
         (playback, task)
     }
+    pub(super) fn toggle(&mut self, cx: &mut Context<Self>) {
+        if self.ended {
+            self.restart(cx);
+        } else {
+            self.playback.paused.fetch_xor(true, Ordering::Relaxed);
+            cx.notify();
+        }
+    }
     fn restart(&mut self, cx: &mut Context<Self>) {
         self.playback.stop();
         let (playback, task) = Self::start(self.path.clone(), cx);
@@ -112,14 +122,19 @@ impl Render for VideoPlayer {
                             .p(px(8.))
                             .rounded_full()
                             .hover(move |s| s.bg(ink.opacity(0.08)))
-                            .on_click(cx.listener(|player, _, _, cx| {
-                                if player.ended {
-                                    player.restart(cx);
-                                } else {
-                                    player.playback.paused.fetch_xor(true, Ordering::Relaxed);
-                                    cx.notify();
-                                }
-                            }))
+                            .tab_index(0)
+                            .tooltip(|_, cx| {
+                                cx.new(|_| PlayerTooltip("Play / pause · Space")).into()
+                            })
+                            .on_key_down(cx.listener(
+                                |player, event: &gpui::KeyDownEvent, _, cx| {
+                                    if matches!(event.keystroke.key.as_str(), "space" | "enter") {
+                                        player.toggle(cx);
+                                        cx.stop_propagation();
+                                    }
+                                },
+                            ))
+                            .on_click(cx.listener(|player, _, _, cx| player.toggle(cx)))
                             .child(
                                 svg()
                                     .path(if self.ended || paused {
@@ -134,6 +149,16 @@ impl Render for VideoPlayer {
                     .child(
                         div()
                             .id("video-restart")
+                            .tab_index(0)
+                            .tooltip(|_, cx| cx.new(|_| PlayerTooltip("Restart")).into())
+                            .on_key_down(cx.listener(
+                                |player, event: &gpui::KeyDownEvent, _, cx| {
+                                    if matches!(event.keystroke.key.as_str(), "space" | "enter") {
+                                        player.restart(cx);
+                                        cx.stop_propagation();
+                                    }
+                                },
+                            ))
                             .cursor_pointer()
                             .p(px(8.))
                             .rounded_full()
@@ -142,5 +167,19 @@ impl Render for VideoPlayer {
                             .child(svg().path(icons::ROTATE_CCW).size(px(18.)).text_color(ink)),
                     ),
             )
+    }
+}
+
+struct PlayerTooltip(&'static str);
+impl Render for PlayerTooltip {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .px(px(8.))
+            .py(px(5.))
+            .rounded(px(6.))
+            .bg(gpui::rgb(0x202126))
+            .text_color(gpui::white())
+            .text_xs()
+            .child(self.0)
     }
 }

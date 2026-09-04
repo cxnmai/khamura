@@ -1,10 +1,12 @@
+use super::process::{Process, has_audio};
 use crate::runtime_tools::{self, Tool};
 use async_channel::Sender;
+use std::time::{Duration, Instant};
 use std::{
     io::Read,
     os::fd::AsRawFd,
     path::PathBuf,
-    process::{Child, Stdio},
+    process::Stdio,
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
@@ -30,6 +32,9 @@ impl Playback {
         let worker = state.clone();
         std::thread::spawn(move || {
             if let Err(error) = decode(path, &worker, &tx) {
+                if worker.stopped() {
+                    return;
+                }
                 let _ = tx.send_blocking(Event::Error(error));
             } else if !worker.stop.load(Ordering::Relaxed) {
                 let _ = tx.send_blocking(Event::End);
@@ -37,77 +42,54 @@ impl Playback {
         });
         state
     }
+    pub fn stopped(&self) -> bool {
+        self.stop.load(Ordering::Relaxed)
+    }
     pub fn stop(&self) {
         self.stop.store(true, Ordering::Relaxed);
     }
 }
-struct Process(Child);
-impl Process {
-    fn pause(&self, paused: bool) {
-        unsafe {
-            libc::kill(
-                self.0.id() as i32,
-                if paused { libc::SIGSTOP } else { libc::SIGCONT },
-            );
-        }
-    }
-}
-impl Drop for Process {
-    fn drop(&mut self) {
-        let _ = self.0.kill();
-        let _ = self.0.wait();
-    }
-}
 fn decode(path: PathBuf, state: &Playback, tx: &Sender<Event>) -> Result<(), String> {
     let mut video = Process(runtime_tools::command(Tool::Ffmpeg)
-        .args(["-v", "error", "-nostdin", "-re", "-i"]).arg(&path)
+        .args(["-v", "error", "-nostdin", "-i"]).arg(&path)
         .args(["-an", "-vf", "fps=24,scale=960:540:force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2", "-pix_fmt", "bgra", "-f", "rawvideo", "pipe:1"])
         .stdin(Stdio::null()).stderr(Stdio::null()).stdout(Stdio::piped()).spawn().map_err(|e| format!("Could not play video: {e}"))?);
-    let probe = runtime_tools::command(Tool::Ffprobe)
-        .args([
-            "-v",
-            "error",
-            "-select_streams",
-            "a:0",
-            "-show_entries",
-            "stream=index",
-            "-of",
-            "csv=p=0",
-        ])
-        .arg(&path)
-        .output()
-        .map_err(|e| format!("Could not inspect audio: {e}"))?;
-    let mut audio = if probe.stdout.is_empty() {
-        None
+    let audio_present = has_audio(&path, state)?;
+    let mut audio = if audio_present {
+        Some(super::process::audio(&path, 0.)?)
     } else {
-        Some(Process(
-            runtime_tools::command(Tool::Ffplay)
-                .args(["-v", "error", "-vn", "-nodisp", "-autoexit", "-i"])
-                .arg(&path)
-                .stdin(Stdio::null())
-                .stderr(Stdio::null())
-                .stdout(Stdio::null())
-                .spawn()
-                .map_err(|e| format!("Could not start audio playback: {e}"))?,
-        ))
+        None
     };
     let mut stdout = video.0.stdout.take().unwrap();
     let mut paused = false;
     let mut pixels = vec![0; (WIDTH * HEIGHT * 4) as usize];
     let mut offset = 0;
     let mut frames = 0;
+    let mut next_frame = Instant::now();
+    let mut progress = Instant::now();
     while !state.stop.load(Ordering::Relaxed) && !tx.is_closed() {
         let next_pause = state.paused.load(Ordering::Relaxed);
         if next_pause != paused {
             video.pause(next_pause);
-            if let Some(audio) = &audio {
-                audio.pause(next_pause);
+            if next_pause {
+                audio.take();
+            } else if audio_present {
+                audio = Some(super::process::audio(&path, frames as f64 / 24.)?);
             }
             paused = next_pause;
+            next_frame = Instant::now();
+            progress = Instant::now();
         }
         if paused {
             std::thread::sleep(std::time::Duration::from_millis(30));
             continue;
+        }
+        if Instant::now() < next_frame {
+            std::thread::sleep(Duration::from_millis(3));
+            continue;
+        }
+        if progress.elapsed() > Duration::from_secs(10) {
+            return Err("Video decoder stalled".into());
         }
         let mut poll = libc::pollfd {
             fd: stdout.as_raw_fd(),
@@ -127,11 +109,15 @@ fn decode(path: PathBuf, state: &Playback, tx: &Sender<Event>) -> Result<(), Str
         }
         match stdout.read(&mut pixels[offset..]) {
             Ok(0) => break,
-            Ok(count) => offset += count,
+            Ok(count) => {
+                offset += count;
+                progress = Instant::now();
+            }
             Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
             Err(e) => return Err(format!("Video playback failed: {e}")),
         }
         if offset == pixels.len() {
+            next_frame += Duration::from_secs_f64(1. / 24.);
             frames += 1;
             let _ = tx.try_send(Event::Frame(pixels.clone()));
             offset = 0;
@@ -140,7 +126,7 @@ fn decode(path: PathBuf, state: &Playback, tx: &Sender<Event>) -> Result<(), Str
     if state.stop.load(Ordering::Relaxed) || tx.is_closed() {
         return Ok(());
     }
-    if frames == 0 || !video.0.wait().map_err(|e| e.to_string())?.success() {
+    if frames == 0 || !video.finish(state)?.success() {
         return Err("Could not decode this video".into());
     }
     if let Some(audio) = &mut audio {
