@@ -5,7 +5,12 @@ let
 in pkgs.rustPlatform.buildRustPackage (dependencies.environment // {
   pname = manifest.package.name;
   version = manifest.package.version;
-  src = pkgs.lib.cleanSource ../.;
+  src = pkgs.lib.fileset.toSource {
+    root = ../.;
+    fileset = pkgs.lib.fileset.unions [
+      ../Cargo.toml ../Cargo.lock ../LICENSE ../src ../assets
+    ];
+  };
   cargoLock.lockFile = ../Cargo.lock;
 
   nativeBuildInputs = dependencies.nativeBuildInputs ++ [ pkgs.makeWrapper ];
