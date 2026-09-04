@@ -10,7 +10,8 @@ const BAR_WIDTH: f32 = 280.0;
 const BAR_HEIGHT: f32 = 48.0;
 const TOGGLE_HEIGHT: f32 = 40.0;
 const END_SIZE: f32 = 40.0;
-const ICON_SIZE: f32 = 20.0;
+const ACTIVE_CIRCLE_SIZE: f32 = 32.0;
+const ICON_SIZE: f32 = 24.0;
 const WELL_DARKEN_FACTOR: f32 = 0.75;
 const WELL_INSET: f32 = 4.0;
 
@@ -74,30 +75,17 @@ impl Render for Toolbar {
         let video_active = video_selected && self.active;
 
         let bar_color = CAMERA_LETTERBOX_COLOR.to_gpui(1.0);
-        let rail_color = gpui::Hsla::from(bar_color);
         let well_color = darken_color(bar_color);
-        let theme_icon = contrasting_icon_color(rail_color);
-        let photo_color = if photo_active {
-            gpui::white().opacity(0.65)
-        } else if photo_selected {
-            gpui::white()
-        } else {
-            rail_color
-        };
-        let video_color = if video_active {
-            gpui::red()
-        } else if video_selected {
-            gpui::red().opacity(0.65)
-        } else {
-            rail_color
-        };
-        let photo_icon = contrasting_icon_color(photo_color);
-        let video_icon = contrasting_icon_color(video_color);
+        let theme_icon = contrasting_icon_color(well_color);
+        let photo_circle = photo_active.then(|| gpui::white().opacity(0.65));
+        let video_circle = video_active.then(gpui::red);
+        let photo_icon = icon_color(photo_circle.unwrap_or(well_color), photo_selected);
+        let video_icon = icon_color(video_circle.unwrap_or(well_color), video_selected);
 
         let mode_buttons = vec![
             mode_button(
                 "photo-mode",
-                photo_color,
+                photo_circle,
                 photo_icon,
                 APERTURE,
                 cx.listener(Self::on_photo_click),
@@ -105,7 +93,7 @@ impl Render for Toolbar {
             .into_any_element(),
             mode_button(
                 "video-mode",
-                video_color,
+                video_circle,
                 video_icon,
                 if video_active { CIRCLE_STOP } else { VIDEO },
                 cx.listener(Self::on_video_click),
@@ -140,7 +128,7 @@ impl Render for Toolbar {
             .bg(well_color)
             .child(mode_button(
                 "fit-window",
-                gpui::transparent_black(),
+                None,
                 theme_icon,
                 if self.cover { MINIMIZE_2 } else { MAXIMIZE_2 },
                 cx.listener(Self::on_fit_click),
@@ -186,6 +174,11 @@ fn darken_color(color: gpui::Rgba) -> gpui::Hsla {
     })
 }
 
+fn icon_color(background: gpui::Hsla, selected: bool) -> gpui::Hsla {
+    let color = contrasting_icon_color(background);
+    if selected { color } else { color.opacity(0.55) }
+}
+
 fn contrasting_icon_color(background: gpui::Hsla) -> gpui::Hsla {
     let color = gpui::Rgba::from(background);
     let brightness = 0.299 * color.r + 0.587 * color.g + 0.114 * color.b;
@@ -199,24 +192,37 @@ fn contrasting_icon_color(background: gpui::Hsla) -> gpui::Hsla {
 
 fn mode_button(
     id: &'static str,
-    background: gpui::Hsla,
+    circle_color: Option<gpui::Hsla>,
     icon_color: gpui::Hsla,
     icon_path: &'static str,
     on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
 ) -> impl IntoElement {
-    div()
+    let mut button = div()
         .id(id)
         .size(px(END_SIZE))
         .flex()
         .items_center()
         .justify_center()
-        .rounded_full()
-        .bg(background)
-        .on_click(on_click)
-        .child(
-            svg()
-                .size(px(ICON_SIZE))
-                .path(icon_path)
-                .text_color(icon_color),
-        )
+        .on_click(on_click);
+
+    if let Some(circle_color) = circle_color {
+        button = button.child(
+            div()
+                .size(px(ACTIVE_CIRCLE_SIZE))
+                .rounded_full()
+                .flex()
+                .items_center()
+                .justify_center()
+                .bg(circle_color)
+                .child(icon(icon_path, icon_color)),
+        );
+    } else {
+        button = button.child(icon(icon_path, icon_color));
+    }
+
+    button
+}
+
+fn icon(path: &'static str, color: gpui::Hsla) -> impl IntoElement {
+    svg().size(px(ICON_SIZE)).path(path).text_color(color)
 }
