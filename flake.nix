@@ -22,6 +22,8 @@
         in {
           default = pkgs.mkShell {
             nativeBuildInputs = with pkgs; [
+              ffmpeg-full
+              pulseaudio
               pkg-config
               llvmPackages.libclang
               linuxHeaders
