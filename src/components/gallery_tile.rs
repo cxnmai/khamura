@@ -6,7 +6,7 @@ pub(super) fn tile(
     edge: f32,
     ink: gpui::Hsla,
     cx: &Context<Gallery>,
-) -> impl IntoElement {
+) -> gpui::Stateful<gpui::Div> {
     let path = item.path.clone();
     let keyboard_path = path.clone();
     div()
