@@ -42,12 +42,24 @@ fn first_save_creates_directory_and_invalid_updates_leave_file_untouched() {
         .unwrap();
     let original = fs::read_to_string(&path).unwrap();
     for opacity in [f32::NAN, -0.1, 1.1] {
-        assert!(config.save_preferences(CameraFit::Cover, Rgb::new(1, 2, 3), opacity).is_err());
+        assert!(
+            config
+                .save_preferences(CameraFit::Cover, Rgb::new(1, 2, 3), opacity)
+                .is_err()
+        );
         assert_eq!(fs::read_to_string(&path).unwrap(), original);
     }
-    for invalid in ["broken = [", "preview_fit = 'stretch'", "background_opacity = 2.0"] {
+    for invalid in [
+        "broken = [",
+        "preview_fit = 'stretch'",
+        "background_opacity = 2.0",
+    ] {
         fs::write(&path, invalid).unwrap();
-        assert!(config.save_preferences(CameraFit::Cover, Rgb::new(1, 2, 3), 0.5).is_err());
+        assert!(
+            config
+                .save_preferences(CameraFit::Cover, Rgb::new(1, 2, 3), 0.5)
+                .is_err()
+        );
         assert_eq!(fs::read_to_string(&path).unwrap(), invalid);
     }
     assert_eq!(fs::read_dir(path.parent().unwrap()).unwrap().count(), 1);
@@ -59,6 +71,10 @@ fn directory_creation_failure_does_not_replace_obstacle() {
     let obstacle = home.path().join(".config");
     fs::write(&obstacle, "not a directory").unwrap();
     let config = Config::parse("", home.path()).unwrap();
-    assert!(config.save_preferences(CameraFit::Cover, Rgb::new(1, 2, 3), 0.5).is_err());
+    assert!(
+        config
+            .save_preferences(CameraFit::Cover, Rgb::new(1, 2, 3), 0.5)
+            .is_err()
+    );
     assert_eq!(fs::read_to_string(obstacle).unwrap(), "not a directory");
 }

@@ -23,26 +23,42 @@ pub(crate) fn save(
     let mut document = original
         .parse::<DocumentMut>()
         .map_err(|error| error.to_string())?;
-    set(&mut document, "preview_fit", Value::from(match fit {
-        CameraFit::Contain => "contain",
-        CameraFit::Cover => "cover",
-    }));
-    set(&mut document, "theme_color", Value::from(format!(
-        "#{:02x}{:02x}{:02x}", color.r, color.g, color.b
-    )));
-    set(&mut document, "background_opacity", Value::from(opacity as f64));
+    set(
+        &mut document,
+        "preview_fit",
+        Value::from(match fit {
+            CameraFit::Contain => "contain",
+            CameraFit::Cover => "cover",
+        }),
+    );
+    set(
+        &mut document,
+        "theme_color",
+        Value::from(format!("#{:02x}{:02x}{:02x}", color.r, color.g, color.b)),
+    );
+    set(
+        &mut document,
+        "background_opacity",
+        Value::from(opacity as f64),
+    );
     let updated = document.to_string();
     Config::parse(&updated, home)?;
     let parent = path.parent().ok_or("configuration path has no parent")?;
     fs::create_dir_all(parent).map_err(|error| error.to_string())?;
-    let mut pending = tempfile::NamedTempFile::new_in(parent)
-        .map_err(|error| error.to_string())?;
+    let mut pending = tempfile::NamedTempFile::new_in(parent).map_err(|error| error.to_string())?;
     if let Ok(metadata) = fs::metadata(path) {
-        pending.as_file().set_permissions(metadata.permissions())
+        pending
+            .as_file()
+            .set_permissions(metadata.permissions())
             .map_err(|error| error.to_string())?;
     }
-    pending.write_all(updated.as_bytes()).map_err(|error| error.to_string())?;
-    pending.as_file().sync_all().map_err(|error| error.to_string())?;
+    pending
+        .write_all(updated.as_bytes())
+        .map_err(|error| error.to_string())?;
+    pending
+        .as_file()
+        .sync_all()
+        .map_err(|error| error.to_string())?;
     pending.persist(path).map_err(|error| error.to_string())?;
     Ok(())
 }
