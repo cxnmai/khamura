@@ -50,6 +50,25 @@ fn resolve_built_path(built: Option<&str>, name: &str) -> PathBuf {
 mod tests {
     use super::*;
     #[test]
+    fn nix_helpers_launch_without_a_shell_path() {
+        for tool in [Tool::Pactl, Tool::Ffmpeg] {
+            if tool.built_path().is_none() {
+                continue;
+            }
+            let output = command(tool)
+                .env("PATH", "/nonexistent/khamura-bin")
+                .arg(if matches!(tool, Tool::Pactl) {
+                    "--version"
+                } else {
+                    "-version"
+                })
+                .output()
+                .expect("embedded runtime tool must launch without PATH");
+            assert!(output.status.success(), "{} failed", tool.name());
+        }
+    }
+
+    #[test]
     fn uses_embedded_tool_path_without_relying_on_launch_path() {
         let file = tempfile::NamedTempFile::new().unwrap();
         assert_eq!(

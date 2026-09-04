@@ -135,3 +135,7 @@ nix develop
 cargo run
 cargo test
 ```
+
+Nix builds retain the absolute `pactl` and `ffmpeg` paths, so the resulting binary
+can also be launched outside the development shell. Rebuild with `nix develop -c cargo build` after updating the environment. Non-Nix builds use tools on `PATH`;
+`KHAMURA_PACTL` and `KHAMURA_FFMPEG` can override their executable locations.
