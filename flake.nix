@@ -1,5 +1,5 @@
 {
-  description = "Khamura GPUI development environment";
+  description = "Khamura camera app and development environment";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
@@ -8,38 +8,24 @@
       systems = [ "x86_64-linux" "aarch64-linux" ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
     in {
+      packages = forAllSystems (system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+          khamura = import ./nix/package.nix { inherit pkgs; };
+        in { inherit khamura; default = khamura; });
+
       devShells = forAllSystems (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
-          runtimeLibraries = with pkgs; [
-            fontconfig
-            freetype
-            libxkbcommon
-            vulkan-loader
-            wayland
-            libxcb
-          ];
+          dependencies = import ./nix/dependencies.nix { inherit pkgs; };
         in {
-          default = pkgs.mkShell {
-            nativeBuildInputs = with pkgs; [
-              ffmpeg-full
-              pulseaudio
-              pkg-config
-              llvmPackages.libclang
-              linuxHeaders
-            ];
-            buildInputs = runtimeLibraries;
-
-            # Embed helper paths at build time for launches outside this shell.
-            KHAMURA_PACTL = "${pkgs.lib.getExe' pkgs.pulseaudio "pactl"}";
-            KHAMURA_FFMPEG = "${pkgs.lib.getExe pkgs.ffmpeg-full}";
-            KHAMURA_FFPLAY = "${pkgs.lib.getExe' pkgs.ffmpeg-full "ffplay"}";
-            KHAMURA_FFPROBE = "${pkgs.lib.getExe' pkgs.ffmpeg-full "ffprobe"}";
-            LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
-            BINDGEN_EXTRA_CLANG_ARGS = "-I${pkgs.linuxHeaders}/include -I${pkgs.stdenv.cc.libc_dev}/include";
-            ZED_PATH_SAMPLE_COUNT = "0";
-            LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath runtimeLibraries;
-          };
+          default = pkgs.mkShell (dependencies.environment // {
+            nativeBuildInputs = dependencies.nativeBuildInputs ++ (with pkgs; [
+              cargo rustc ffmpeg-full pulseaudio
+            ]);
+            buildInputs = dependencies.runtimeLibraries;
+            LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath dependencies.runtimeLibraries;
+          });
         });
     };
 }
