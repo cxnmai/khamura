@@ -33,13 +33,40 @@ impl Config {
             .filter(|value| !value.is_empty())
             .map(PathBuf::from)
             .ok_or("HOME is not set")?;
-        let path = home.join(".config/khamura/config.toml");
+        Self::load_from_home(&home)
+    }
+
+    pub(crate) fn load_from_home(home: &Path) -> Result<Self, String> {
+        let (path, relocated) = crate::config_location::resolve(home)?;
         let text = match fs::read_to_string(&path) {
             Ok(text) => text,
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound && !relocated => String::new(),
             Err(error) => return Err(format!("{}: {error}", path.display())),
         };
-        Self::parse(&text, &home).map_err(|error| format!("{}: {error}", path.display()))
+        let mut config = Self::parse(&text, home)
+            .map_err(|error| format!("{}: {error}", path.display()))?;
+        config.path = path;
+        Ok(config)
+    }
+
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    pub fn set_output_path(&mut self, path: &Path) -> Result<(), String> {
+        crate::config_location::validate(path)?;
+        if path.exists() && !path.is_dir() {
+            return Err("output path must be a directory".into());
+        }
+        crate::config_store::save_output(&self.path, &self.home, path)?;
+        self.photo_directory = path.to_path_buf();
+        Ok(())
+    }
+
+    pub fn relocate(&mut self, target: &Path) -> Result<(), String> {
+        crate::config_location::relocate(self, &self.home, target)?;
+        self.path = target.to_path_buf();
+        Ok(())
     }
 
     pub fn save_preferences(&self, fit: CameraFit, color: Rgb, opacity: f32) -> Result<(), String> {
@@ -136,3 +163,7 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "config_path_tests.rs"]
+mod path_tests;
