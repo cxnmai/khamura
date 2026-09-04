@@ -7,7 +7,7 @@ impl Gallery {
         self.options_open = false;
         self.action_notice = None;
         match action {
-            Action::Folder => cx.open_with_system(&cx.global::<Config>().photo_directory),
+            Action::Folder => self.open_folder(cx),
             Action::Path => {
                 if let Some(path) = &self.selected {
                     cx.write_to_clipboard(ClipboardItem::new_string(
@@ -19,6 +19,26 @@ impl Gallery {
             Action::Image => self.copy_image(cx),
         }
         cx.notify();
+    }
+
+    fn open_folder(&mut self, cx: &mut Context<Self>) {
+        let path = cx.global::<Config>().photo_directory.clone();
+        let prepare = cx.background_executor().spawn(async move {
+            std::fs::create_dir_all(&path)
+                .map(|_| path)
+                .map_err(|error| format!("Could not open gallery folder: {error}"))
+        });
+        cx.spawn(async move |this, cx| {
+            let result = prepare.await;
+            let _ = this.update(cx, |this, cx| {
+                match result {
+                    Ok(path) => cx.open_with_system(&path),
+                    Err(error) => this.action_notice = Some(error),
+                }
+                cx.notify();
+            });
+        })
+        .detach();
     }
 
     fn copy_image(&mut self, cx: &mut Context<Self>) {
