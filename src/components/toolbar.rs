@@ -77,24 +77,27 @@ impl Render for Toolbar {
         let rail_color = gpui::Hsla::from(bar_color);
         let well_color = darken_color(bar_color);
         let theme_icon = contrasting_icon_color(rail_color);
-        let photo_icon = if photo_active {
-            theme_icon.opacity(0.65)
+        let photo_color = if photo_active {
+            gpui::white().opacity(0.65)
         } else if photo_selected {
-            theme_icon
+            gpui::white()
         } else {
-            theme_icon.opacity(0.55)
+            rail_color
         };
-        let video_icon = if video_active {
-            theme_icon
+        let video_color = if video_active {
+            gpui::red()
         } else if video_selected {
-            theme_icon.opacity(0.65)
+            gpui::red().opacity(0.65)
         } else {
-            theme_icon.opacity(0.55)
+            rail_color
         };
+        let photo_icon = contrasting_icon_color(photo_color);
+        let video_icon = contrasting_icon_color(video_color);
 
         let mode_buttons = vec![
             mode_button(
                 "photo-mode",
+                photo_color,
                 photo_icon,
                 APERTURE,
                 cx.listener(Self::on_photo_click),
@@ -102,6 +105,7 @@ impl Render for Toolbar {
             .into_any_element(),
             mode_button(
                 "video-mode",
+                video_color,
                 video_icon,
                 if video_active { CIRCLE_STOP } else { VIDEO },
                 cx.listener(Self::on_video_click),
@@ -136,6 +140,7 @@ impl Render for Toolbar {
             .bg(well_color)
             .child(mode_button(
                 "fit-window",
+                gpui::transparent_black(),
                 theme_icon,
                 if self.cover { MINIMIZE_2 } else { MAXIMIZE_2 },
                 cx.listener(Self::on_fit_click),
@@ -194,6 +199,7 @@ fn contrasting_icon_color(background: gpui::Hsla) -> gpui::Hsla {
 
 fn mode_button(
     id: &'static str,
+    background: gpui::Hsla,
     icon_color: gpui::Hsla,
     icon_path: &'static str,
     on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
@@ -204,6 +210,8 @@ fn mode_button(
         .flex()
         .items_center()
         .justify_center()
+        .rounded_full()
+        .bg(background)
         .on_click(on_click)
         .child(
             svg()
