@@ -1,0 +1,16 @@
+name: Set up Linux dependencies
+description: Native build libraries and headless release-check tools for Ubuntu
+runs:
+  using: composite
+  steps:
+    - name: Install native dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install --yes --no-install-recommends \
+          build-essential clang libclang-dev cmake nasm pkg-config \
+          libfontconfig1-dev libfreetype6-dev libxkbcommon-dev \
+          libxkbcommon-x11-dev libwayland-dev libxcb1-dev \
+          libxcb-shape0-dev libxcb-xfixes0-dev libxcb-randr0-dev \
+          libxcb-xinput-dev libxcb-xkb-dev libvulkan1 libssl-dev \
+          ffmpeg pulseaudio-utils desktop-file-utils
