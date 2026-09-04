@@ -88,60 +88,40 @@ impl Render for PathSettings {
             .gap(px(12.))
             .children(paths.into_iter().map(|(label, path, config)| {
                 let tooltip = path.clone();
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap(px(4.))
-                    .child(
-                        div()
-                            .flex()
-                            .items_center()
-                            .justify_between()
-                            .child(label)
-                            .child(
-                                div()
-                                    .id(label)
-                                    .tab_index(0)
-                                    .px(px(8.))
-                                    .py(px(4.))
-                                    .rounded(px(6.))
-                                    .text_xs()
-                                    .bg(ink.opacity(0.08))
-                                    .when(!self.pending, |button| {
-                                        button
-                                            .cursor_pointer()
-                                            .hover(|style| style.bg(ink.opacity(0.16)))
-                                    })
-                                    .when(self.pending, |button| button.opacity(0.5))
-                                    .on_click(
-                                        cx.listener(move |this, _, _, cx| this.choose(config, cx)),
-                                    )
-                                    .on_key_down(cx.listener(
-                                        move |this, event: &gpui::KeyDownEvent, _, cx| {
-                                            if event.keystroke.key == "enter"
-                                                || event.keystroke.key == "space"
-                                            {
-                                                this.choose(config, cx);
-                                                cx.stop_propagation();
-                                            }
-                                        },
-                                    ))
-                                    .child("Change"),
-                            ),
-                    )
-                    .child(
-                        div()
-                            .id(if config {
-                                "config-path-value"
-                            } else {
-                                "output-path-value"
+                div().flex().flex_col().gap(px(4.)).child(label).child(
+                    div()
+                        .id(if config {
+                            "config-path-value"
+                        } else {
+                            "output-path-value"
+                        })
+                        .tab_index(0)
+                        .w_full()
+                        .px(px(8.))
+                        .py(px(7.))
+                        .rounded(px(6.))
+                        .border_1()
+                        .border_color(ink.opacity(0.2))
+                        .bg(ink.opacity(0.04))
+                        .when(!self.pending, |field| {
+                            field.cursor_pointer().hover(|style| {
+                                style.bg(ink.opacity(0.1)).border_color(ink.opacity(0.4))
                             })
-                            .text_xs()
-                            .text_color(ink.opacity(0.6))
-                            .truncate()
-                            .tooltip(move |_, cx| cx.new(|_| PathTooltip(tooltip.clone())).into())
-                            .child(super::path_label::path_label(&path)),
-                    )
+                        })
+                        .when(self.pending, |field| field.opacity(0.5))
+                        .on_click(cx.listener(move |this, _, _, cx| this.choose(config, cx)))
+                        .on_key_down(cx.listener(move |this, event: &gpui::KeyDownEvent, _, cx| {
+                            if event.keystroke.key == "enter" || event.keystroke.key == "space" {
+                                this.choose(config, cx);
+                                cx.stop_propagation();
+                            }
+                        }))
+                        .text_xs()
+                        .text_color(ink.opacity(0.75))
+                        .truncate()
+                        .tooltip(move |_, cx| cx.new(|_| PathTooltip(tooltip.clone())).into())
+                        .child(super::path_label::path_label(&path)),
+                )
             }))
             .when_some(self.error.clone(), |panel, error| {
                 panel.child(

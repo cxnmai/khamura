@@ -21,9 +21,9 @@ Save failures appear in the panel with a retry action; changes remain visible
 but are not persistent until saving succeeds.
 
 The path controls show the current locations and open native file dialogs:
-- **Config path → Change:** choose a new settings-file location. Existing files
+- **Config path:** click the boxed path to choose a new settings-file location. Existing files
   are not overwritten. The app remembers the new location across restarts.
-- **Output path → Change:** choose the photo output directory. This updates
+- **Output path:** click the boxed path to choose the photo output directory. This updates
   `photo_directory`; photo saving itself is not implemented yet.
 
 Cancelling a dialog leaves the paths unchanged. Path-change failures appear
