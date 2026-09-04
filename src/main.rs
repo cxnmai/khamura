@@ -1,4 +1,7 @@
 mod components;
+mod capture_settings;
+mod device_catalog;
+mod media;
 mod config;
 mod config_location;
 mod config_store;
@@ -18,13 +21,14 @@ fn main() {
         .with_assets(icons::LucideAssets)
         .run(move |cx: &mut App| {
             cx.set_global(session_settings::SessionSettings::from(&config));
+            cx.set_global(capture_settings::CaptureSettings::from(&config));
             cx.set_global(config);
             cx.open_window(
                 WindowOptions {
                     window_background: WindowBackgroundAppearance::Transparent,
                     ..Default::default()
                 },
-                |_, cx| cx.new(Camera::new),
+                |window, cx| cx.new(|cx| Camera::new(window, cx)),
             )
             .expect("failed to open window");
         });

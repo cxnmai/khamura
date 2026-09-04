@@ -13,6 +13,7 @@ pub struct Settings {
     focus: FocusHandle,
     opacity: Entity<OpacitySlider>,
     paths: Entity<PathSettings>,
+    devices: Entity<super::device_settings::DeviceSettings>,
 }
 impl Settings {
     pub fn new(cx: &mut Context<Self>) -> Self {
@@ -22,6 +23,7 @@ impl Settings {
             focus: cx.focus_handle(),
             opacity: cx.new(OpacitySlider::new),
             paths: cx.new(PathSettings::new),
+            devices: cx.new(super::device_settings::DeviceSettings::new),
         }
     }
 }
@@ -122,6 +124,7 @@ impl Render for Settings {
                     )
                     .child(self.opacity.clone()),
             )
+            .child(self.devices.clone())
             .child(self.paths.clone())
             .when(settings.save_error.is_some(), |view| {
                 view.child(super::save_status::save_status(settings, foreground))
