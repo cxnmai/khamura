@@ -10,3 +10,5 @@ async-channel = "2.5"
 image = { version = "0.25.10", default-features = false }
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
+toml_edit = "0.22"
+tempfile = "3"

@@ -1,3 +1,4 @@
+use crate::session_settings::CameraFit;
 use crate::theme::{CAMERA_LETTERBOX_COLOR, CAMERA_LETTERBOX_OPACITY, Rgb};
 use serde::Deserialize;
 use std::{
@@ -7,6 +8,9 @@ use std::{
 
 #[derive(Clone)]
 pub struct Config {
+    path: PathBuf,
+    home: PathBuf,
+    pub preview_fit: CameraFit,
     pub photo_directory: PathBuf,
     pub theme_color: Rgb,
     pub background_opacity: f32,
@@ -17,6 +21,7 @@ impl gpui::Global for Config {}
 #[derive(Default, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 struct FileConfig {
+    preview_fit: Option<CameraFit>,
     photo_directory: Option<String>,
     theme_color: Option<String>,
     background_opacity: Option<f32>,
@@ -37,7 +42,12 @@ impl Config {
         Self::parse(&text, &home).map_err(|error| format!("{}: {error}", path.display()))
     }
 
-    fn parse(text: &str, home: &Path) -> Result<Self, String> {
+    pub fn save_preferences(&self, fit: CameraFit, color: Rgb, opacity: f32) -> Result<(), String> {
+        crate::config_store::save(&self.path, &self.home, fit, color, opacity)
+            .map_err(|error| format!("{}: {error}", self.path.display()))
+    }
+
+    pub(crate) fn parse(text: &str, home: &Path) -> Result<Self, String> {
         let raw: FileConfig = toml::from_str(text).map_err(|error| error.to_string())?;
         let photo_directory = match raw.photo_directory.as_deref() {
             None => home.join("Pictures/khamura"),
@@ -57,6 +67,9 @@ impl Config {
             return Err("background_opacity must be between 0.0 and 1.0".into());
         }
         Ok(Self {
+            path: home.join(".config/khamura/config.toml"),
+            home: home.to_path_buf(),
+            preview_fit: raw.preview_fit.unwrap_or_default(),
             photo_directory,
             theme_color,
             background_opacity,
