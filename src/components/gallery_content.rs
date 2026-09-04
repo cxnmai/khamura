@@ -27,7 +27,22 @@ impl Gallery {
                 .flex_1()
                 .min_h_0()
                 .p(px(20.))
-                .child(img(path.clone()).size_full().object_fit(ObjectFit::Contain))
+                .child(
+                    img(path.clone())
+                        .size_full()
+                        .object_fit(ObjectFit::Contain)
+                        .with_fallback(move || {
+                            div()
+                                .size_full()
+                                .flex()
+                                .items_center()
+                                .justify_center()
+                                .text_sm()
+                                .text_color(ink.opacity(0.5))
+                                .child("Photo unavailable")
+                                .into_any_element()
+                        }),
+                )
                 .into_any_element();
         }
         let store = cx.global::<GalleryStore>();
