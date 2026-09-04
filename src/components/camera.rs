@@ -18,8 +18,7 @@ use crate::{
 use async_channel::{Receiver, Sender};
 use gpui::{
     AnyWindowHandle, Context, Entity, FocusHandle, Focusable, IntoElement, MouseButton, ObjectFit,
-    Render, RenderImage, Size, Subscription, Task, WeakEntity, Window, div, img, prelude::*, px,
-    size,
+    Render, RenderImage, Size, Subscription, Task, Window, div, img, prelude::*, px, size,
 };
 use image::RgbaImage;
 use std::{

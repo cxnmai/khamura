@@ -2,7 +2,7 @@ mod encoder;
 mod photo;
 mod recorder;
 
-pub use photo::{crop_bounds, photo_pixels, save_photo};
+pub use photo::{crop_bounds, save_photo};
 pub use recorder::Recorder;
 
 use std::path::{Path, PathBuf};

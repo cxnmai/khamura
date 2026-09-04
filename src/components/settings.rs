@@ -19,6 +19,8 @@ impl Settings {
     pub fn new(cx: &mut Context<Self>) -> Self {
         cx.observe_global::<SessionSettings>(|_, cx| cx.notify())
             .detach();
+        cx.observe_global::<crate::capture_settings::CaptureSettings>(|_, cx| cx.notify())
+            .detach();
         Self {
             focus: cx.focus_handle(),
             opacity: cx.new(OpacitySlider::new),
@@ -105,6 +107,7 @@ impl Render for Settings {
             .child(super::mirror_control::mirror_control(
                 settings.mirror,
                 foreground,
+                cx.global::<crate::capture_settings::CaptureSettings>().busy,
             ))
             .child(super::theme_palette::theme_palette(
                 selected_color,

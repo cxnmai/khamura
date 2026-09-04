@@ -19,7 +19,7 @@ impl Recorder {
         microphone: Option<String>,
         fps: u32,
     ) -> Result<(Self, async_channel::Receiver<Result<PathBuf, String>>), String> {
-        if initial.width() == 0 || initial.height() == 0 || fps == 0 || fps > 120 {
+        if initial.width() == 0 || initial.height() == 0 || fps == 0 {
             return Err("Invalid recording dimensions or frame rate".into());
         }
         let (temporary, destination) = super::destination(output, "mp4")?;
