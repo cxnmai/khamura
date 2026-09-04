@@ -8,6 +8,7 @@ fn unchanged_media_reuses_thumbnails_and_failed_decodes() {
     let video = directory.path().join("video.mp4");
     std::fs::write(&photo, b"photo").unwrap();
     std::fs::write(&video, b"video").unwrap();
+    std::fs::write(directory.path().join(".khamura-pending.mp4"), b"partial").unwrap();
     let calls = Cell::new(0);
     let extract = |_: &Path, is_video| {
         calls.set(calls.get() + 1);

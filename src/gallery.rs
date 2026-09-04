@@ -122,6 +122,10 @@ fn scan_with(
     for entry in entries {
         let entry = entry.map_err(|error| format!("Could not read gallery entry: {error}"))?;
         let path = entry.path();
+        // Never decode a still-being-written (or crash-abandoned) capture file.
+        if entry.file_name().to_string_lossy().starts_with(".khamura-") {
+            continue;
+        }
         if !path
             .extension()
             .is_some_and(|ext| ext.eq_ignore_ascii_case("png") || ext.eq_ignore_ascii_case("mp4"))
