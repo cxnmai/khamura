@@ -31,7 +31,8 @@ need to be installed separately. See [release packaging](docs/releases.md).
 
 ### Nix / NixOS
 
-Install the native package, including runtime tools, the desktop launcher, and icon:
+On x86-64 NixOS, install the prebuilt release with Nix-managed runtime tools,
+the desktop launcher, and icon:
 
 ```sh
 nix profile add github:cxnmai/khamura
@@ -40,7 +41,8 @@ nix profile add github:cxnmai/khamura
 For a declarative NixOS or Home Manager setup, add `github:cxnmai/khamura` as a
 flake input and include `inputs.khamura.packages.${pkgs.stdenv.hostPlatform.system}.default`
 in `environment.systemPackages` or `home.packages`. No `--install-desktop` step
-is needed for Nix installs. The first installation builds from source.
+is needed for Nix installs. Nix downloads the release binary and patches its
+library paths; it does not compile Rust.
 
 ## Configuration
 
