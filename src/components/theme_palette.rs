@@ -42,8 +42,15 @@ pub(super) fn theme_palette(selected: Rgb, foreground: Hsla) -> impl IntoElement
     div()
         .flex()
         .flex_col()
-        .gap(px(8.))
-        .child("Appearance")
+        .gap(px(6.))
+        .child(
+            div()
+                .flex()
+                .justify_between()
+                .items_center()
+                .child("Appearance")
+                .child(div().text_color(foreground.opacity(0.5)).child(name)),
+        )
         .children([DARK, LIGHT].into_iter().map(move |row| {
             div()
                 .flex()
@@ -80,12 +87,6 @@ pub(super) fn theme_palette(selected: Rgb, foreground: Hsla) -> impl IntoElement
                         )
                 }))
         }))
-        .child(
-            div()
-                .text_xs()
-                .text_color(foreground.opacity(0.6))
-                .child(name),
-        )
 }
 
 struct SwatchTooltip(&'static str);

@@ -61,15 +61,15 @@ impl Render for Settings {
             .max_h((window.viewport_size().height - px(100.)).max(px(0.)))
             .overflow_y_scroll()
             .p(px(16.))
-            .rounded(px(20.))
+            .rounded(px(14.))
             .border_1()
-            .border_color(foreground.opacity(0.16))
+            .border_color(foreground.opacity(0.1))
             .bg(selected_color.to_gpui(1.))
             .text_color(foreground)
-            .text_sm()
+            .text_xs()
             .flex()
             .flex_col()
-            .gap(px(16.))
+            .gap(px(12.))
             .child(
                 div()
                     .font_weight(gpui::FontWeight::SEMIBOLD)
@@ -84,19 +84,19 @@ impl Render for Settings {
                     .child(
                         div()
                             .flex()
-                            .p(px(3.))
-                            .rounded_full()
-                            .bg(foreground.opacity(0.08))
+                            .p(px(2.))
+                            .rounded(px(7.))
+                            .bg(foreground.opacity(0.04))
                             .children(fits.into_iter().map(|(id, label, fit)| {
                                 let selected = selected_fit == fit;
                                 div()
                                     .id(id)
-                                    .px(px(12.))
+                                    .px(px(10.))
                                     .py(px(5.))
-                                    .rounded_full()
+                                    .rounded(px(7.))
                                     .cursor_pointer()
-                                    .when(selected, |button| button.bg(foreground.opacity(0.18)))
-                                    .hover(|style| style.bg(foreground.opacity(0.12)))
+                                    .when(selected, |button| button.bg(foreground.opacity(0.1)))
+                                    .hover(|style| style.bg(foreground.opacity(0.07)))
                                     .on_click(move |_, _, cx| {
                                         SessionSettings::change(cx, |settings| settings.fit = fit);
                                     })
@@ -123,7 +123,11 @@ impl Render for Settings {
                             .flex()
                             .justify_between()
                             .child("Background opacity")
-                            .child(format!("{:.0}%", opacity * 100.)),
+                            .child(
+                                div()
+                                    .text_color(foreground.opacity(0.55))
+                                    .child(format!("{:.0}%", opacity * 100.)),
+                            ),
                     )
                     .child(self.opacity.clone()),
             )

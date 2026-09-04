@@ -110,28 +110,28 @@ impl Render for OpacitySlider {
                     .child(
                         div()
                             .absolute()
-                            .top(px(12.))
+                            .top(px(13.))
                             .w_full()
-                            .h(px(4.))
+                            .h(px(2.))
                             .rounded_full()
                             .bg(ink.opacity(0.2)),
                     )
                     .child(
                         div()
                             .absolute()
-                            .top(px(12.))
+                            .top(px(13.))
                             .w(relative(opacity))
-                            .h(px(4.))
+                            .h(px(2.))
                             .rounded_full()
                             .bg(ink),
                     )
                     .child(
                         div()
                             .absolute()
-                            .top(px(8.))
+                            .top(px(9.))
                             .left(relative(opacity))
-                            .ml(px(-6.))
-                            .size(px(12.))
+                            .ml(px(-5.))
+                            .size(px(10.))
                             .rounded_full()
                             .bg(ink),
                     ),

@@ -11,13 +11,15 @@ pub(super) fn mirror_control(enabled: bool, ink: gpui::Hsla, busy: bool) -> impl
             div()
                 .id("mirror-preview")
                 .tab_index(0)
-                .px(px(12.))
+                .min_w(px(42.))
+                .text_center()
+                .px(px(10.))
                 .py(px(5.))
-                .rounded_full()
-                .bg(ink.opacity(if enabled { 0.18 } else { 0.08 }))
+                .rounded(px(7.))
+                .bg(ink.opacity(if enabled { 0.1 } else { 0.04 }))
                 .when(busy, |button| button.opacity(0.4))
                 .when(!busy, |button| button.cursor_pointer())
-                .hover(|style| style.bg(ink.opacity(0.25)))
+                .hover(|style| style.bg(ink.opacity(0.14)))
                 .on_click(|_, _, cx| {
                     if !cx.global::<crate::capture_settings::CaptureSettings>().busy {
                         SessionSettings::change(cx, |settings| settings.mirror = !settings.mirror);
