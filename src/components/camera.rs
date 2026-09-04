@@ -1,12 +1,13 @@
 use super::{
     camera_capture::{CapturedFrame, capture_frames},
-    toolbar::{FitModeChanged, Toolbar},
+    settings::{Settings, SettingsDismissed},
+    toolbar::{SettingsToggled, Toolbar},
 };
-use crate::config::Config;
+use crate::session_settings::{CameraFit, SessionSettings};
 use async_channel::Receiver;
 use gpui::{
-    Context, Entity, IntoElement, ObjectFit, Render, RenderImage, Size, Subscription, Task,
-    WeakEntity, Window, div, img, prelude::*, size,
+    Context, Entity, FocusHandle, Focusable, IntoElement, MouseButton, ObjectFit, Render,
+    RenderImage, Size, Subscription, Task, WeakEntity, Window, div, img, prelude::*, px, size,
 };
 use image::{Frame, ImageBuffer, Rgba};
 use std::{
@@ -17,25 +18,17 @@ use std::{
     thread,
 };
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum CameraFit {
-    Contain,
-    Cover,
-}
-
-impl Default for CameraFit {
-    fn default() -> Self {
-        Self::Contain
-    }
-}
-
 pub struct Camera {
     frame: Option<Arc<RenderImage>>,
     status: String,
-    fit: CameraFit,
+    settings: Entity<Settings>,
+    settings_open: bool,
+    focus_pending: bool,
+    previous_focus: Option<FocusHandle>,
     stop_capture: Arc<AtomicBool>,
     toolbar: Entity<Toolbar>,
     _toolbar_subscription: Subscription,
+    _settings_subscription: Subscription,
     _capture_task: Task<()>,
 }
 
@@ -47,26 +40,54 @@ impl Camera {
         let capture_task = Self::receive_frames(cx, receiver);
         let capture_stop = Arc::clone(&stop_capture);
         let toolbar = cx.new(Toolbar::new);
-        let toolbar_subscription =
-            cx.subscribe(&toolbar, |camera, _, event: &FitModeChanged, cx| {
-                let fit = if event.cover {
-                    CameraFit::Cover
-                } else {
-                    CameraFit::Contain
-                };
-                camera.set_fit(fit, cx);
+        let settings = cx.new(Settings::new);
+        let toolbar_subscription = cx.subscribe(&toolbar, |camera, _, _: &SettingsToggled, cx| {
+            camera.set_settings_open(!camera.settings_open, cx);
+        });
+        let settings_subscription =
+            cx.subscribe(&settings, |camera, _, _: &SettingsDismissed, cx| {
+                camera.set_settings_open(false, cx);
             });
+        cx.observe_global::<SessionSettings>(|_, cx| cx.notify())
+            .detach();
         thread::spawn(move || capture_frames(sender, capture_stop));
 
         Self {
             frame: None,
             status: "Starting camera…".into(),
-            fit: CameraFit::default(),
+            settings,
+            settings_open: false,
+            focus_pending: false,
+            previous_focus: None,
             stop_capture,
             toolbar,
             _toolbar_subscription: toolbar_subscription,
+            _settings_subscription: settings_subscription,
             _capture_task: capture_task,
         }
+    }
+
+    fn settings_overlay(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .absolute()
+            .size_full()
+            .child(div().absolute().size_full().on_mouse_down(
+                MouseButton::Left,
+                cx.listener(|camera, _, _, cx| {
+                    camera.set_settings_open(false, cx);
+                    cx.stop_propagation();
+                }),
+            ))
+            .child(
+                div()
+                    .absolute()
+                    .bottom(px(84.))
+                    .left_0()
+                    .right_0()
+                    .flex()
+                    .justify_center()
+                    .child(self.settings.clone()),
+            )
     }
 
     fn receive_frames(
@@ -102,27 +123,33 @@ impl Camera {
         })
     }
 
-    pub fn set_fit(&mut self, fit: CameraFit, cx: &mut Context<Self>) {
-        if self.fit != fit {
-            self.fit = fit;
+    fn set_settings_open(&mut self, open: bool, cx: &mut Context<Self>) {
+        if self.settings_open != open {
+            self.settings_open = open;
+            self.focus_pending = true;
+            self.toolbar
+                .update(cx, |toolbar, cx| toolbar.set_settings_open(open, cx));
             cx.notify();
         }
-    }
-
-    pub fn toggle_fit(&mut self, cx: &mut Context<Self>) {
-        let fit = match self.fit {
-            CameraFit::Contain => CameraFit::Cover,
-            CameraFit::Cover => CameraFit::Contain,
-        };
-        self.set_fit(fit, cx);
     }
 }
 
 impl Render for Camera {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let config = cx.global::<Config>();
+        if self.focus_pending {
+            self.focus_pending = false;
+            if self.settings_open {
+                self.previous_focus = window.focused(cx);
+                self.settings.read(cx).focus_handle(cx).focus(window);
+            } else if let Some(focus) = self.previous_focus.take() {
+                focus.focus(window);
+            } else {
+                window.blur();
+            }
+        }
+        let config = cx.global::<SessionSettings>();
         if let Some(frame) = self.frame.clone() {
-            let image = match self.fit {
+            let image = match config.fit {
                 CameraFit::Contain => {
                     // Size the painted image explicitly so resizing the window always leaves
                     // the unused area outside the image as letterbox space.
@@ -144,16 +171,23 @@ impl Render for Camera {
                 // The image is opaque; only the letterbox area uses this alpha.
                 .bg(config.theme_color.to_gpui(config.background_opacity))
                 .child(image)
+                .when(self.settings_open, |view| {
+                    view.child(self.settings_overlay(cx))
+                })
                 .child(self.toolbar.clone())
         } else {
             div()
                 .size_full()
+                .relative()
                 .flex()
                 .items_center()
                 .justify_center()
                 .bg(gpui::black())
                 .text_color(gpui::white())
                 .child(self.status.clone())
+                .when(self.settings_open, |view| {
+                    view.child(self.settings_overlay(cx))
+                })
                 .child(self.toolbar.clone())
         }
     }
