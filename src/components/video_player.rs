@@ -19,6 +19,12 @@ pub struct VideoPlayer {
 }
 impl VideoPlayer {
     pub fn new(path: PathBuf, cx: &mut Context<Self>) -> Self {
+        cx.on_release(|player, cx| {
+            if let Some(frame) = player.frame.take() {
+                cx.drop_image(frame, None);
+            }
+        })
+        .detach();
         let (playback, task) = Self::start(path.clone(), cx);
         Self {
             path,
