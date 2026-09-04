@@ -22,8 +22,34 @@ The toolbar changes with the selected mode:
 
 A recording timer appears below the top edge of the preview. Capture options and
 Mirror are locked during capture/recording. Closing the window waits for video
-finalization. Capture/save feedback and error popups report results; there is
-no gallery yet. **Escape** cancels a countdown or dismisses settings/an error.
+finalization. Capture/save feedback and error popups report results.
+**Escape** cancels a countdown or dismisses settings/an error.
+
+## Gallery
+
+The square toolbar preview opens a responsive photo/video gallery. Click a tile
+for the focused view; use the thumbnail strip or arrow keys to browse. Videos
+play inline with audio, pause (**Space**), and restart controls. **Escape** goes
+back. The **…** menu copies an image or its path and opens the output folder.
+The gallery background uses the configured background opacity.
+
+## Performance
+
+Recording automatically uses VAAPI H.264 encoding when a bounded, real encode
+probe succeeds for the requested dimensions. Otherwise it uses thread-limited
+software H.264 at the existing CRF20 quality. To force software for driver
+troubleshooting, launch with `KHAMURA_VIDEO_ENCODER=software`.
+Hardware uses QP20 (not equivalent to CRF); files can be larger. Capture resolution,
+frame rate, crop, and mirror are unchanged. Saved MP4s remain normally playable
+and seekable, but omit the full-file faststart rewrite used for progressive web
+playback, reducing stop-time disk work.
+
+Unchanged gallery thumbnails are cached in memory using path, size, and
+modification time; only new/changed media is decoded after saving. Grid rows are
+virtualized and full-size photo caches are released when changing selection.
+Hidden camera previews skip decoding; MJPEG frames decode directly to BGRA.
+Playback and software encoding use bounded worker counts rather than consuming
+all available CPU threads.
 
 ## Settings
 
@@ -136,6 +162,8 @@ cargo run
 cargo test
 ```
 
-Nix builds retain the absolute `pactl` and `ffmpeg` paths, so the resulting binary
+Nix builds retain the absolute `pactl`, `ffmpeg`, `ffprobe`, and `ffplay` paths, so the resulting binary
 can also be launched outside the development shell. Rebuild with `nix develop -c cargo build` after updating the environment. Non-Nix builds use tools on `PATH`;
-`KHAMURA_PACTL` and `KHAMURA_FFMPEG` can override their executable locations.
+`KHAMURA_PACTL`, `KHAMURA_FFMPEG`, `KHAMURA_FFPROBE`, and `KHAMURA_FFPLAY`
+can override their executable locations. Use `cargo run --release` to assess
+performance; debug builds are not representative of image-processing speed.
