@@ -5,7 +5,7 @@ use std::borrow::Cow;
 pub const APERTURE: &str = "icons/aperture.svg";
 pub const VIDEO: &str = "icons/video.svg";
 pub const CIRCLE_STOP: &str = "icons/circle-stop.svg";
-pub const MAXIMIZE_2: &str = "icons/maximize-2.svg";
+pub const SLIDERS_HORIZONTAL: &str = "icons/sliders-horizontal.svg";
 
 pub struct LucideAssets;
 
@@ -15,7 +15,7 @@ impl AssetSource for LucideAssets {
             APERTURE => Some(include_bytes!("../assets/icons/aperture.svg")),
             VIDEO => Some(include_bytes!("../assets/icons/video.svg")),
             CIRCLE_STOP => Some(include_bytes!("../assets/icons/circle-stop.svg")),
-            MAXIMIZE_2 => Some(include_bytes!("../assets/icons/maximize-2.svg")),
+            SLIDERS_HORIZONTAL => Some(include_bytes!("../assets/icons/sliders-horizontal.svg")),
             _ => None,
         };
 

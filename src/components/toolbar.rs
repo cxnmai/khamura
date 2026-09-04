@@ -1,6 +1,6 @@
 use crate::{
-    icons::{APERTURE, CIRCLE_STOP, MAXIMIZE_2, VIDEO},
-    config::Config,
+    icons::{APERTURE, CIRCLE_STOP, SLIDERS_HORIZONTAL, VIDEO},
+    session_settings::SessionSettings,
 };
 use gpui::{
     App, ClickEvent, Context, EventEmitter, IntoElement, Render, Window, div, prelude::*, px, svg,
@@ -12,7 +12,7 @@ const TOGGLE_HEIGHT: f32 = 40.0;
 const END_SIZE: f32 = 40.0;
 const ACTIVE_CIRCLE_SIZE: f32 = 32.0;
 const ICON_SIZE: f32 = 24.0;
-const FIT_ICON_SIZE: f32 = 18.0;
+const SETTINGS_ICON_SIZE: f32 = 18.0;
 const WELL_DARKEN_FACTOR: f32 = 0.75;
 const WELL_INSET: f32 = 4.0;
 
@@ -22,22 +22,22 @@ pub enum CameraMode {
     Video,
 }
 
-pub struct FitModeChanged {
-    pub cover: bool,
-}
+pub struct SettingsToggled;
 
 pub struct Toolbar {
     selected_mode: CameraMode,
     active: bool,
-    cover: bool,
+    settings_open: bool,
 }
 
 impl Toolbar {
-    pub fn new(_: &mut Context<Self>) -> Self {
+    pub fn new(cx: &mut Context<Self>) -> Self {
+        cx.observe_global::<SessionSettings>(|_, cx| cx.notify())
+            .detach();
         Self {
             selected_mode: CameraMode::Photo,
             active: false,
-            cover: false,
+            settings_open: false,
         }
     }
 
@@ -59,14 +59,17 @@ impl Toolbar {
         self.select_or_toggle(CameraMode::Video, cx);
     }
 
-    fn on_fit_click(&mut self, _: &ClickEvent, _: &mut Window, cx: &mut Context<Self>) {
-        self.cover = !self.cover;
-        cx.emit(FitModeChanged { cover: self.cover });
+    pub fn set_settings_open(&mut self, open: bool, cx: &mut Context<Self>) {
+        self.settings_open = open;
         cx.notify();
+    }
+
+    fn on_settings_click(&mut self, _: &ClickEvent, _: &mut Window, cx: &mut Context<Self>) {
+        cx.emit(SettingsToggled);
     }
 }
 
-impl EventEmitter<FitModeChanged> for Toolbar {}
+impl EventEmitter<SettingsToggled> for Toolbar {}
 
 impl Render for Toolbar {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
@@ -75,7 +78,7 @@ impl Render for Toolbar {
         let video_selected = self.selected_mode == CameraMode::Video;
         let video_active = video_selected && self.active;
 
-        let bar_color = cx.global::<Config>().theme_color.to_gpui(1.0);
+        let bar_color = cx.global::<SessionSettings>().theme_color.to_gpui(1.0);
         let well_color = darken_color(bar_color);
         let theme_icon = contrasting_icon_color(well_color);
         let photo_circle = photo_selected.then(|| {
@@ -134,12 +137,12 @@ impl Render for Toolbar {
                     .children(mode_buttons),
             );
 
-        let fit_icon = if self.cover {
+        let settings_icon = if self.settings_open {
             theme_icon
         } else {
             theme_icon.opacity(0.55)
         };
-        let fit_button = div()
+        let settings_button = div()
             .size(px(TOGGLE_HEIGHT))
             .rounded_full()
             .flex()
@@ -147,18 +150,18 @@ impl Render for Toolbar {
             .justify_center()
             .bg(well_color)
             .child(mode_button(
-                "fit-window",
+                "settings-toggle",
                 None,
-                fit_icon,
-                MAXIMIZE_2,
-                FIT_ICON_SIZE,
-                cx.listener(Self::on_fit_click),
+                settings_icon,
+                SLIDERS_HORIZONTAL,
+                SETTINGS_ICON_SIZE,
+                cx.listener(Self::on_settings_click),
             ));
 
         // Add future controls to this list; the outer pill lays them out consistently.
         let bar_elements = vec![
             mode_toggle.into_any_element(),
-            fit_button.into_any_element(),
+            settings_button.into_any_element(),
         ];
 
         div()
@@ -177,9 +180,8 @@ impl Render for Toolbar {
                     .rounded_full()
                     .flex()
                     .items_center()
-                    .justify_start()
-                    .gap(px(8.))
-                    .pl(px(8.))
+                    .justify_between()
+                    .px(px(8.))
                     .bg(bar_color)
                     .children(bar_elements),
             )
@@ -225,6 +227,7 @@ fn mode_button(
         .flex()
         .items_center()
         .justify_center()
+        .cursor_pointer()
         .on_click(on_click);
 
     if let Some(circle_color) = circle_color {
