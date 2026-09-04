@@ -1,5 +1,5 @@
 use crate::{
-    icons::{APERTURE, CIRCLE_STOP, MAXIMIZE_2, MINIMIZE_2, VIDEO},
+    icons::{APERTURE, CIRCLE_STOP, MAXIMIZE_2, VIDEO},
     theme::CAMERA_LETTERBOX_COLOR,
 };
 use gpui::{
@@ -12,6 +12,7 @@ const TOGGLE_HEIGHT: f32 = 40.0;
 const END_SIZE: f32 = 40.0;
 const ACTIVE_CIRCLE_SIZE: f32 = 32.0;
 const ICON_SIZE: f32 = 24.0;
+const FIT_ICON_SIZE: f32 = 18.0;
 const WELL_DARKEN_FACTOR: f32 = 0.75;
 const WELL_INSET: f32 = 4.0;
 
@@ -100,6 +101,7 @@ impl Render for Toolbar {
                 photo_circle,
                 photo_icon,
                 APERTURE,
+                ICON_SIZE,
                 cx.listener(Self::on_photo_click),
             )
             .into_any_element(),
@@ -108,6 +110,7 @@ impl Render for Toolbar {
                 video_circle,
                 video_icon,
                 if video_active { CIRCLE_STOP } else { VIDEO },
+                ICON_SIZE,
                 cx.listener(Self::on_video_click),
             )
             .into_any_element(),
@@ -131,6 +134,11 @@ impl Render for Toolbar {
                     .children(mode_buttons),
             );
 
+        let fit_icon = if self.cover {
+            theme_icon
+        } else {
+            theme_icon.opacity(0.55)
+        };
         let fit_button = div()
             .size(px(TOGGLE_HEIGHT))
             .rounded_full()
@@ -141,8 +149,9 @@ impl Render for Toolbar {
             .child(mode_button(
                 "fit-window",
                 None,
-                theme_icon,
-                if self.cover { MINIMIZE_2 } else { MAXIMIZE_2 },
+                fit_icon,
+                MAXIMIZE_2,
+                FIT_ICON_SIZE,
                 cx.listener(Self::on_fit_click),
             ));
 
@@ -207,6 +216,7 @@ fn mode_button(
     circle_color: Option<gpui::Hsla>,
     icon_color: gpui::Hsla,
     icon_path: &'static str,
+    icon_size: f32,
     on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
 ) -> impl IntoElement {
     let mut button = div()
@@ -226,15 +236,15 @@ fn mode_button(
                 .items_center()
                 .justify_center()
                 .bg(circle_color)
-                .child(icon(icon_path, icon_color)),
+                .child(icon(icon_path, icon_color, icon_size)),
         );
     } else {
-        button = button.child(icon(icon_path, icon_color));
+        button = button.child(icon(icon_path, icon_color, icon_size));
     }
 
     button
 }
 
-fn icon(path: &'static str, color: gpui::Hsla) -> impl IntoElement {
-    svg().size(px(ICON_SIZE)).path(path).text_color(color)
+fn icon(path: &'static str, color: gpui::Hsla, icon_size: f32) -> impl IntoElement {
+    svg().size(px(icon_size)).path(path).text_color(color)
 }

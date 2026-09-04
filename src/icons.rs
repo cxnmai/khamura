@@ -6,7 +6,6 @@ pub const APERTURE: &str = "icons/aperture.svg";
 pub const VIDEO: &str = "icons/video.svg";
 pub const CIRCLE_STOP: &str = "icons/circle-stop.svg";
 pub const MAXIMIZE_2: &str = "icons/maximize-2.svg";
-pub const MINIMIZE_2: &str = "icons/minimize-2.svg";
 
 pub struct LucideAssets;
 
@@ -17,7 +16,6 @@ impl AssetSource for LucideAssets {
             VIDEO => Some(include_bytes!("../assets/icons/video.svg")),
             CIRCLE_STOP => Some(include_bytes!("../assets/icons/circle-stop.svg")),
             MAXIMIZE_2 => Some(include_bytes!("../assets/icons/maximize-2.svg")),
-            MINIMIZE_2 => Some(include_bytes!("../assets/icons/minimize-2.svg")),
             _ => None,
         };
 
