@@ -20,6 +20,15 @@ released (or the panel closes). All three settings are restored on restart.
 Save failures appear in the panel with a retry action; changes remain visible
 but are not persistent until saving succeeds.
 
+The path controls show the current locations and open native file dialogs:
+- **Config path → Change:** choose a new settings-file location. Existing files
+  are not overwritten. The app remembers the new location across restarts.
+- **Output path → Change:** choose the photo output directory. This updates
+  `photo_directory`; photo saving itself is not implemented yet.
+
+Cancelling a dialog leaves the paths unchanged. Path-change failures appear
+inline in the settings panel.
+
 ## Configuration
 
 Optionally create `~/.config/khamura/config.toml`:
@@ -46,7 +55,10 @@ stderr and prevent startup.
   the camera image is unaffected.
 - `preview_fit`: `"contain"` (Fit, the default) or `"cover"` (Fill).
 
-The config path is relative to `HOME`; `XDG_CONFIG_HOME` is not used.
+The default config path is relative to `HOME`; `XDG_CONFIG_HOME` is not used.
+After relocating the config, `~/.config/khamura/config-path` records its absolute
+location so the app can find it on restart. Keep that locator file in place;
+removing it makes the app use the default config location again.
 No configuration file is required at startup. Changing a setting creates it
 and its parent directory if needed. Saves preserve existing comments and
 `photo_directory`, and replace the file atomically rather than truncating it.
