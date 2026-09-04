@@ -1,6 +1,8 @@
+use std::{cell::Cell, rc::Rc};
+#[path = "device_options.rs"]
+mod options;
 use crate::{
-    capture_settings::CaptureSettings,
-    device_catalog::{Device, DeviceCatalog},
+    capture_settings::CaptureSettings, device_catalog::DeviceCatalog,
     session_settings::SessionSettings,
 };
 use gpui::{Context, IntoElement, Render, Window, div, prelude::*, px};
@@ -9,6 +11,8 @@ pub struct DeviceSettings {
     catalog: DeviceCatalog,
     loading: bool,
     open: Option<bool>,
+    focus: gpui::FocusHandle,
+    bounds: [Rc<Cell<gpui::Bounds<gpui::Pixels>>>; 2],
 }
 impl DeviceSettings {
     pub fn new(cx: &mut Context<Self>) -> Self {
@@ -23,6 +27,8 @@ impl DeviceSettings {
             catalog: DeviceCatalog::default(),
             loading: false,
             open: None,
+            focus: cx.focus_handle(),
+            bounds: std::array::from_fn(|_| Rc::new(Cell::new(gpui::Bounds::default()))),
         };
         this.refresh(cx);
         this
@@ -47,12 +53,12 @@ impl DeviceSettings {
         .detach();
     }
 
-    fn selector(&self, camera: bool, cx: &mut Context<Self>) -> impl IntoElement {
+    fn selector(&self, camera: bool, window: &Window, cx: &mut Context<Self>) -> impl IntoElement {
         let settings = cx.global::<CaptureSettings>();
         let selected = if camera {
-            &settings.camera_device
+            settings.camera_device.clone()
         } else {
-            &settings.microphone_device
+            settings.microphone_device.clone()
         };
         let devices = if camera {
             &self.catalog.cameras
@@ -65,7 +71,7 @@ impl DeviceSettings {
                 devices
                     .iter()
                     .find(|device| &device.id == id)
-                    .map(|device| device.label.clone())
+                    .map(|device| options::label(device, camera))
                     .unwrap_or_else(|| format!("{id} (unavailable)"))
             })
             .unwrap_or_else(|| "System default".into());
@@ -74,13 +80,14 @@ impl DeviceSettings {
         options.extend(
             devices
                 .iter()
-                .map(|Device { id, label }| (Some(id.clone()), label.clone())),
+                .map(|device| (Some(device.id.clone()), options::label(device, camera))),
         );
-        if let Some(id) = selected {
+        if let Some(id) = &selected {
             if !devices.iter().any(|device| &device.id == id) {
                 options.push((Some(id.clone()), format!("{id} (unavailable)")));
             }
         }
+        let bounds = self.bounds[usize::from(camera)].clone();
         let ink = super::settings::foreground(cx.global::<SessionSettings>().theme_color);
         div()
             .flex()
@@ -94,6 +101,12 @@ impl DeviceSettings {
                     } else {
                         "microphone-device"
                     })
+                    .relative()
+                    .child(
+                        gpui::canvas(move |rect, _, _| bounds.set(rect), |_, _, _, _| {})
+                            .absolute()
+                            .size_full(),
+                    )
                     .tab_index(0)
                     .border_1()
                     .border_color(ink.opacity(0.2))
@@ -109,67 +122,31 @@ impl DeviceSettings {
                             .cursor_pointer()
                             .hover(|style| style.bg(ink.opacity(0.1)))
                     })
-                    .on_click(cx.listener(move |this, _, _, cx| this.toggle(camera, cx)))
-                    .on_key_down(cx.listener(move |this, event: &gpui::KeyDownEvent, _, cx| {
-                        if event.keystroke.key == "enter" || event.keystroke.key == "space" {
-                            this.toggle(camera, cx);
-                            cx.stop_propagation();
-                        }
-                    })),
+                    .on_click(
+                        cx.listener(move |this, _, window, cx| this.toggle(camera, window, cx)),
+                    )
+                    .on_key_down(cx.listener(
+                        move |this, event: &gpui::KeyDownEvent, window, cx| {
+                            if event.keystroke.key == "enter" || event.keystroke.key == "space" {
+                                this.toggle(camera, window, cx);
+                                cx.stop_propagation();
+                            }
+                        },
+                    )),
             )
             .when(self.open == Some(camera) && !busy, |panel| {
-                panel.child(
-                    div()
-                        .id(if camera {
-                            "camera-options"
-                        } else {
-                            "microphone-options"
-                        })
-                        .max_h(px(160.))
-                        .overflow_y_scroll()
-                        .rounded(px(6.))
-                        .border_1()
-                        .border_color(ink.opacity(0.2))
-                        .children(options.into_iter().enumerate().map(|(index, (id, label))| {
-                            let chosen = &id == selected;
-                            let keyboard_id = id.clone();
-                            div()
-                                .id((
-                                    if camera {
-                                        "camera-option"
-                                    } else {
-                                        "microphone-option"
-                                    },
-                                    index,
-                                ))
-                                .tab_index(0)
-                                .px(px(8.))
-                                .py(px(7.))
-                                .text_xs()
-                                .truncate()
-                                .cursor_pointer()
-                                .when(chosen, |item| item.bg(ink.opacity(0.12)))
-                                .hover(|style| style.bg(ink.opacity(0.08)))
-                                .child(label)
-                                .on_click(cx.listener(move |this, _, _, cx| {
-                                    this.select(camera, id.clone(), cx);
-                                }))
-                                .on_key_down(cx.listener(
-                                    move |this, event: &gpui::KeyDownEvent, _, cx| {
-                                        if event.keystroke.key == "enter"
-                                            || event.keystroke.key == "space"
-                                        {
-                                            this.select(camera, keyboard_id.clone(), cx);
-                                            cx.stop_propagation();
-                                        }
-                                    },
-                                ))
-                        })),
-                )
+                panel.child(options::popup(
+                    self,
+                    camera,
+                    options,
+                    selected.clone(),
+                    window,
+                    cx,
+                ))
             })
     }
 
-    fn toggle(&mut self, camera: bool, cx: &mut Context<Self>) {
+    fn toggle(&mut self, camera: bool, window: &mut Window, cx: &mut Context<Self>) {
         if cx.global::<CaptureSettings>().busy {
             return;
         }
@@ -178,6 +155,7 @@ impl DeviceSettings {
         } else {
             Some(camera)
         };
+        window.focus(&self.focus);
         cx.notify();
     }
 
@@ -197,13 +175,20 @@ impl DeviceSettings {
 }
 
 impl Render for DeviceSettings {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         div()
+            .track_focus(&self.focus)
+            .on_key_down(cx.listener(|this, event: &gpui::KeyDownEvent, _, cx| {
+                if event.keystroke.key == "escape" && this.open.take().is_some() {
+                    cx.stop_propagation();
+                    cx.notify();
+                }
+            }))
             .flex()
             .flex_col()
             .gap(px(12.))
-            .child(self.selector(true, cx))
-            .child(self.selector(false, cx))
+            .child(self.selector(true, window, cx))
+            .child(self.selector(false, window, cx))
             .child(
                 div()
                     .id("refresh-devices")
