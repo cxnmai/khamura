@@ -82,7 +82,7 @@ fn record(mut encoder: Encoder, latest: Arc<Mutex<Arc<RgbaImage>>>, stopped: Arc
         // Never queue stale frames: repeat the latest image at each output timestamp.
         // If encoding falls behind, catch up using current frames to retain wall-clock duration.
         while Instant::now() < next && !stopped.load(Ordering::Relaxed) {
-            std::thread::sleep((next - Instant::now()).min(Duration::from_millis(5)));
+            std::thread::sleep(next.saturating_duration_since(Instant::now()).min(Duration::from_millis(5)));
         }
         if stopped.load(Ordering::Relaxed) { break; }
     }
