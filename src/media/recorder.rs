@@ -1,4 +1,4 @@
-use super::encoder::Encoder;
+use super::{encoder::Encoder, recording_stop::RecordingStop};
 use image::RgbaImage;
 use std::io::Write;
 use std::os::fd::AsRawFd;
@@ -8,7 +8,7 @@ use std::time::{Duration, Instant};
 
 pub struct Recorder {
     frame: Arc<Mutex<Arc<RgbaImage>>>,
-    stopped: Arc<Mutex<Option<Instant>>>,
+    stopped: Arc<RecordingStop>,
 }
 
 impl Recorder {
@@ -33,7 +33,7 @@ impl Recorder {
         )?;
         let recorder = Self {
             frame: Arc::new(Mutex::new(initial)),
-            stopped: Arc::new(Mutex::new(None)),
+            stopped: Arc::new(RecordingStop::default()),
         };
         let frame = recorder.frame.clone();
         let stopped = recorder.stopped.clone();
@@ -55,10 +55,7 @@ impl Recorder {
     }
 
     pub fn stop(&self) {
-        self.stopped
-            .lock()
-            .unwrap()
-            .get_or_insert_with(Instant::now);
+        self.stopped.request();
     }
 }
 
@@ -71,7 +68,7 @@ impl Drop for Recorder {
 fn record(
     mut encoder: Encoder,
     latest: Arc<Mutex<Arc<RgbaImage>>>,
-    stopped: Arc<Mutex<Option<Instant>>>,
+    stopped: Arc<RecordingStop>,
     fps: u32,
 ) -> Result<(), String> {
     let mut stdin = encoder.child.stdin.take().unwrap();
@@ -86,7 +83,7 @@ fn record(
     let mut last_progress = Instant::now();
     let mut next_health_check = Instant::now();
     loop {
-        if let Some(stop_time) = *stopped.lock().unwrap() {
+        if let Some(stop_time) = stopped.time() {
             let target = (stop_time.saturating_duration_since(started).as_secs_f64()
                 * f64::from(fps))
             .ceil() as u64;
@@ -100,7 +97,7 @@ fn record(
             // Health checks are bounded in time, not repeated for every partial
             // pipe write (which previously caused thousands of locks/waitpid calls).
             if Instant::now() >= next_health_check {
-                if stopped.lock().unwrap().is_some() && stop_deadline.is_none() {
+                if stopped.time().is_some() && stop_deadline.is_none() {
                     stop_deadline = Some(Instant::now() + Duration::from_secs(30));
                 }
                 if stop_deadline.is_some_and(|deadline| Instant::now() > deadline) {
@@ -134,12 +131,7 @@ fn record(
         next += period;
         // Never queue stale frames: repeat the latest image at each output timestamp.
         // If encoding falls behind, catch up using current frames to retain wall-clock duration.
-        while Instant::now() < next && stopped.lock().unwrap().is_none() {
-            std::thread::sleep(
-                next.saturating_duration_since(Instant::now())
-                    .min(Duration::from_millis(5)),
-            );
-        }
+        stopped.wait_until(next);
     }
     drop(stdin);
     let deadline = Instant::now() + Duration::from_secs(15);

@@ -3,6 +3,7 @@ mod encoder_pipe;
 mod microphone;
 mod photo;
 mod recorder;
+mod recording_stop;
 
 pub use photo::{crop_bounds, save_photo};
 pub use recorder::Recorder;
