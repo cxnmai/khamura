@@ -77,19 +77,13 @@ fn record(
     let mut stdin = encoder.child.stdin.take().unwrap();
     // Nonblocking writes let stop and encoder failure interrupt a stalled pipe.
     let fd = stdin.as_raw_fd();
-    // SAFETY: fd is borrowed from a live pipe, and these calls do not transfer ownership.
-    let flags = unsafe { libc::fcntl(fd, libc::F_GETFL) };
-    if flags < 0 || unsafe { libc::fcntl(fd, libc::F_SETFL, flags | libc::O_NONBLOCK) } < 0 {
-        return Err(format!(
-            "Cannot configure recording pipe: {}",
-            std::io::Error::last_os_error()
-        ));
-    }
+    super::encoder_pipe::make_nonblocking(fd)?;
     let period = Duration::from_secs_f64(1.0 / f64::from(fps));
     let started = Instant::now();
     let mut next = started;
     let mut frames_written = 0_u64;
     let mut stop_deadline = None;
+    let mut last_progress = Instant::now();
     loop {
         if let Some(stop_time) = *stopped.lock().unwrap() {
             let target = (stop_time.saturating_duration_since(started).as_secs_f64()
@@ -103,19 +97,26 @@ fn record(
         let mut bytes = frame.as_raw().as_slice();
         while !bytes.is_empty() {
             if stopped.lock().unwrap().is_some() && stop_deadline.is_none() {
-                stop_deadline = Some(Instant::now() + Duration::from_secs(10));
+                stop_deadline = Some(Instant::now() + Duration::from_secs(30));
             }
             if stop_deadline.is_some_and(|deadline| Instant::now() > deadline) {
-                return Err("Video encoder did not respond while stopping".into());
+                return Err(encoder.error("Encoder cannot keep up with this video quality; try a lower resolution or frame rate"));
+            }
+            if last_progress.elapsed() > Duration::from_secs(10) {
+                return Err(encoder.error("Video encoder stopped accepting frames"));
             }
             if let Some(status) = encoder.child.try_wait().map_err(|e| e.to_string())? {
                 return Err(encoder.error(&format!("Video encoder exited unexpectedly ({status})")));
             }
             match stdin.write(bytes) {
                 Ok(0) => return Err(encoder.error("Video encoder closed its input")),
-                Ok(n) => bytes = &bytes[n..],
+                Ok(n) => {
+                    bytes = &bytes[n..];
+                    last_progress = Instant::now();
+                }
                 Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                    std::thread::sleep(Duration::from_millis(2))
+                    super::encoder_pipe::wait_writable(fd)
+                        .map_err(|error| encoder.error(&error))?;
                 }
                 Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {}
                 Err(e) => return Err(encoder.error(&format!("Cannot send video frame: {e}"))),

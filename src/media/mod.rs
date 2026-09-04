@@ -1,4 +1,5 @@
 mod encoder;
+mod encoder_pipe;
 mod microphone;
 mod photo;
 mod recorder;
