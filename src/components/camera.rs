@@ -23,7 +23,10 @@ use gpui::{
 };
 use image::RgbaImage;
 use std::{
-    sync::Arc,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
     thread,
     time::{Duration, Instant},
 };
@@ -51,6 +54,7 @@ pub struct Camera {
     requests: Sender<CaptureRequest>,
     request: CaptureRequest,
     capture_ready: bool,
+    decode_enabled: Arc<AtomicBool>,
     fps: u32,
     activity: Activity,
     recorder: Option<crate::media::Recorder>,
@@ -81,6 +85,7 @@ impl Camera {
                 .flatten(),
         };
         let _ = requests.try_send(request.clone());
+        let decode_enabled = Arc::new(AtomicBool::new(true));
         let capture_task = Self::receive_frames(cx, receiver);
         let tick_task = Self::tick_task(cx);
         let root_focus = cx.focus_handle();
@@ -113,6 +118,7 @@ impl Camera {
                 &gallery,
                 |camera, _, _: &super::gallery::GalleryDismissed, cx| {
                     camera.gallery = None;
+                    camera.decode_enabled.store(true, Ordering::Relaxed);
                     camera.refresh_preview(cx);
                     camera.previous_focus = None;
                     camera.focus_pending = true;
@@ -120,6 +126,7 @@ impl Camera {
                 },
             )
             .detach();
+            camera.decode_enabled.store(false, Ordering::Relaxed);
             camera.gallery = Some(gallery);
             cx.notify();
         })
@@ -133,7 +140,8 @@ impl Camera {
             cx.notify();
         })
         .detach();
-        thread::spawn(move || capture_frames(sender, request_receiver));
+        let worker_enabled = decode_enabled.clone();
+        thread::spawn(move || capture_frames(sender, request_receiver, worker_enabled));
 
         Self {
             frame: None,
@@ -148,6 +156,7 @@ impl Camera {
             requests,
             request,
             capture_ready: false,
+            decode_enabled,
             fps: 30,
             activity: Activity::Idle,
             recorder: None,
