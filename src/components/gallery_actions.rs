@@ -1,6 +1,7 @@
 use super::Gallery;
 use crate::{icons, session_settings::SessionSettings};
-use gpui::{Context, div, prelude::*, px, svg};
+use gpui::{Bounds, Context, Pixels, div, prelude::*, px, svg};
+use std::{cell::Cell, rc::Rc};
 
 #[path = "gallery_clipboard.rs"]
 mod clipboard;
@@ -16,6 +17,8 @@ impl Gallery {
     pub(super) fn actions(&self, cx: &Context<Self>) -> impl IntoElement {
         let theme = cx.global::<SessionSettings>().theme_color;
         let ink = super::super::settings::foreground(theme);
+        let trigger = Rc::new(Cell::new(Bounds::<Pixels>::default()));
+        let measured = trigger.clone();
         let mut items = Vec::new();
         if let Some(path) = &self.selected {
             if path
@@ -56,6 +59,11 @@ impl Gallery {
                         cx.notify();
                     }
                 }))
+                .child(
+                    gpui::canvas(move |bounds, _, _| measured.set(bounds), |_, _, _, _| {})
+                        .absolute()
+                        .size_full(),
+                )
                 .child(svg().path(icons::ELLIPSIS).size(px(18.)).text_color(ink))
                 .when(self.options_open, |button| {
                     button.child(
@@ -73,10 +81,14 @@ impl Gallery {
                                 .border_1()
                                 .border_color(ink.opacity(0.08))
                                 .occlude()
-                                .on_mouse_down_out(cx.listener(|this, _, _, cx| {
-                                    this.options_open = false;
-                                    cx.notify();
-                                }))
+                                .on_mouse_down_out(cx.listener(
+                                    move |this, event: &gpui::MouseDownEvent, _, cx| {
+                                        if !trigger.get().contains(&event.position) {
+                                            this.options_open = false;
+                                            cx.notify();
+                                        }
+                                    },
+                                ))
                                 .on_click(|_, _, cx| cx.stop_propagation())
                                 .children(items.into_iter().enumerate().map(
                                     |(index, (label, action))| {
