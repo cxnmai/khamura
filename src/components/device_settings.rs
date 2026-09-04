@@ -13,18 +13,29 @@ pub struct DeviceSettings {
 impl DeviceSettings {
     pub fn new(cx: &mut Context<Self>) -> Self {
         cx.observe_global::<CaptureSettings>(|this, cx| {
-            if cx.global::<CaptureSettings>().busy { this.open = None; }
+            if cx.global::<CaptureSettings>().busy {
+                this.open = None;
+            }
             cx.notify();
-        }).detach();
-        let mut this = Self { catalog: DeviceCatalog::default(), loading: false, open: None };
+        })
+        .detach();
+        let mut this = Self {
+            catalog: DeviceCatalog::default(),
+            loading: false,
+            open: None,
+        };
         this.refresh(cx);
         this
     }
 
     fn refresh(&mut self, cx: &mut Context<Self>) {
-        if self.loading || cx.global::<CaptureSettings>().busy { return; }
+        if self.loading || cx.global::<CaptureSettings>().busy {
+            return;
+        }
         self.loading = true;
-        let query = cx.background_executor().spawn(async { DeviceCatalog::discover() });
+        let query = cx
+            .background_executor()
+            .spawn(async { DeviceCatalog::discover() });
         cx.spawn(async move |this, cx| {
             let catalog = query.await;
             let _ = this.update(cx, |this, cx| {
@@ -32,7 +43,8 @@ impl DeviceSettings {
                 this.loading = false;
                 cx.notify();
             });
-        }).detach();
+        })
+        .detach();
     }
 
     fn selector(&self, camera: bool, cx: &mut Context<Self>) -> impl IntoElement {
