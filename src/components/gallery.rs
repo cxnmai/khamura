@@ -25,12 +25,6 @@ impl Gallery {
         }
     }
 
-    pub fn focus_on_open(&mut self, cx: &mut Context<Self>) {
-        self.focus_pending = true;
-        self.selected = None;
-        cx.notify();
-    }
-
     fn back(&mut self, cx: &mut Context<Self>) {
         if self.selected.take().is_none() {
             cx.emit(GalleryDismissed);
@@ -72,7 +66,7 @@ impl Render for Gallery {
                 match event.keystroke.key.as_str() {
                     "escape" => gallery.back(cx),
                     "left" | "right" => gallery.navigate(event.keystroke.key == "right", cx),
-                    _ => {}
+                    _ => return,
                 }
                 cx.stop_propagation();
             }))
@@ -87,6 +81,16 @@ impl Render for Gallery {
                     .child(
                         div()
                             .id("gallery-back")
+                            .tab_index(0)
+                            .tooltip(|_, cx| cx.new(|_| BackTooltip).into())
+                            .on_key_down(cx.listener(
+                                |gallery, event: &gpui::KeyDownEvent, _, cx| {
+                                    if matches!(event.keystroke.key.as_str(), "enter" | "space") {
+                                        gallery.back(cx);
+                                        cx.stop_propagation();
+                                    }
+                                },
+                            ))
                             .size(px(32.))
                             .rounded_full()
                             .cursor_pointer()
@@ -100,5 +104,20 @@ impl Render for Gallery {
                     .child(div().text_sm().truncate().child(title)),
             )
             .child(self.content(window, cx))
+    }
+}
+
+struct BackTooltip;
+impl Render for BackTooltip {
+    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = cx.global::<SessionSettings>().theme_color;
+        div()
+            .px(px(8.))
+            .py(px(4.))
+            .rounded(px(5.))
+            .bg(theme.to_gpui(1.))
+            .text_color(super::settings::foreground(theme))
+            .text_xs()
+            .child("Back · Esc")
     }
 }
