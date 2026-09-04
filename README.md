@@ -2,6 +2,28 @@
 
 A Linux desktop camera app built with Rust and GPUI.
 
+## Capture
+
+Click an inactive photo/video icon to select that mode, then click the selected
+icon to capture a photo or start/stop recording. **Space** also captures or
+starts/stops recording. Photo capture is momentary, not a toggle.
+
+Photos save as **PNG**; videos save as **MP4 (H.264)**, with **AAC** audio when the
+microphone is enabled. Both use the output directory, which is created when
+needed. Mirror applies to both the live preview and saved photos/videos.
+
+The toolbar changes with the selected mode:
+- **Photo:** countdown timer (Off / 3s / 10s), aspect ratio (Native / 4:3 / 16:9 /
+  Square), and a rule-of-thirds grid. The selected aspect ratio crops the saved
+  photo as well as its preview.
+- **Video:** microphone On/Off, camera-supported resolution/frame-rate presets,
+  and the same grid. Grid lines are guides only; they never appear in saved media.
+
+A recording timer appears below the top edge of the preview. Capture options and
+Mirror are locked during capture/recording. Closing the window waits for video
+finalization. Capture/save feedback and error popups report results; there is
+no gallery yet. **Escape** cancels a countdown or dismisses settings/an error.
+
 ## Settings
 
 Click the sliders button on the toolbar to open settings above it. Choose Fit or
@@ -16,18 +38,24 @@ theme; a custom hex color can still be set in the config file.
 
 Press Escape, click outside the panel, or click the sliders button again to close
 it. Fit and color selections save immediately; opacity saves when the slider is
-released (or the panel closes). All three settings are restored on restart.
+released (or the panel closes). Settings are restored on restart.
 The **Mirror** toggle flips the camera image horizontally and saves
 immediately. Mirroring is on by default and works in both Fit and Fill modes;
-the toolbar and settings panel are never mirrored.
+saved photos and videos are mirrored too. The toolbar and settings panel are
+never mirrored.
 Save failures appear in the panel with a retry action; changes remain visible
 but are not persistent until saving succeeds.
+
+Camera and microphone dropdowns select capture devices; **System default**
+uses the default device. **Refresh devices** updates the list after connecting
+hardware. These selections persist across restarts; unavailable saved devices
+remain visible in the list.
 
 The path controls show the current locations and open native file dialogs:
 - **Config path:** click the boxed path to choose a new settings-file location. Existing files
   are not overwritten. The app remembers the new location across restarts.
-- **Output path:** click the boxed path to choose the photo output directory. This updates
-  `photo_directory`; photo saving itself is not implemented yet.
+- **Output path:** click the boxed path to choose the photo/video output directory.
+  This updates `photo_directory`.
 
 Cancelling a dialog leaves the paths unchanged. Path-change failures appear
 inline in the settings panel.
@@ -50,8 +78,8 @@ stderr and prevent startup.
 
 - `photo_directory`: an absolute path or a path starting with `~/`. Other shell
   expansions (such as `$HOME`) are not supported. Defaults to
-  `~/Pictures/khamura`. This configures the destination for future photo saving;
-  photo capture is not implemented yet. Loading config does not create it.
+  `~/Pictures/khamura`. Both photos and videos save here. Loading config does not
+  create it; saving media does.
 - `theme_color`: RGB hex color (`#RRGGBB`), used for the toolbar and preview
   letterbox background.
 - `background_opacity`: number from `0.0` (transparent) to `1.0` (opaque), applied
@@ -59,7 +87,7 @@ stderr and prevent startup.
   the camera image is unaffected.
 - `preview_fit`: `"contain"` (Fit, the default) or `"cover"` (Fill).
 - `mirror`: boolean, defaults to `true`. Set to `false` for an unmirrored live
-  preview, or change it immediately with the settings toggle.
+  preview and saved media, or change it immediately with the settings toggle.
 
 The default config path is relative to `HOME`; `XDG_CONFIG_HOME` is not used.
 After relocating the config, `~/.config/khamura/config-path` records its absolute
