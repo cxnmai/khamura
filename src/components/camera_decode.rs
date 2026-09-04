@@ -24,6 +24,14 @@ pub(super) fn decode(buffer: &Buffer) -> Result<CapturedFrame, String> {
 }
 
 fn decode_jpeg(data: &[u8], width: u32, height: u32) -> std::io::Result<Vec<u8>> {
+    // mozjpeg resumes an unwind on malformed input despite its Result API.
+    // Contain it here so corrupt camera frames report an error, not a dead worker.
+    std::panic::catch_unwind(|| decode_jpeg_pixels(data, width, height)).map_err(|_| {
+        std::io::Error::new(std::io::ErrorKind::InvalidData, "Malformed camera JPEG")
+    })?
+}
+
+fn decode_jpeg_pixels(data: &[u8], width: u32, height: u32) -> std::io::Result<Vec<u8>> {
     let decoder = mozjpeg::Decompress::new_mem(data)?;
     if decoder.width() != width as usize || decoder.height() != height as usize {
         return Err(std::io::Error::new(
@@ -93,6 +101,8 @@ mod tests {
             .collect();
         assert_eq!(decode(&buffer).unwrap().pixels, expected);
         assert!(decode_jpeg(&jpeg, 8, 6).is_err());
-        assert!(decode_jpeg(b"not a jpeg", 9, 6).is_err());
+        for data in [b"not a jpeg".as_slice(), &[], &[0xff, 0xd8]] {
+            assert!(decode_jpeg(data, 9, 6).is_err());
+        }
     }
 }
