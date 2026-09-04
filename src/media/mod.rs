@@ -1,4 +1,5 @@
 mod encoder;
+mod microphone;
 mod photo;
 mod recorder;
 

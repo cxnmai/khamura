@@ -17,6 +17,8 @@ impl Encoder {
         mirror: bool,
         microphone: Option<&str>,
     ) -> Result<Self, String> {
+        let microphone = microphone.map(super::microphone::resolve).transpose()?;
+        let microphone = microphone.as_deref();
         let mut command = Command::new("ffmpeg");
         command.args([
             "-hide_banner",

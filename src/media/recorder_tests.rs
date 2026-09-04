@@ -86,15 +86,16 @@ fn invalid_microphone_reports_failure_without_publishing() {
     }
     let output = tempfile::tempdir().unwrap();
     let frame = Arc::new(RgbaImage::new(64, 48));
-    let (recorder, completion) = Recorder::start(
+    let result = Recorder::start(
         output.path(),
         frame,
         false,
         Some("khamura-nonexistent-test-source".into()),
         10,
-    )
-    .unwrap();
-    recorder.stop();
-    assert!(completion.recv_blocking().unwrap().is_err());
+    );
+    if let Ok((recorder, completion)) = result {
+        recorder.stop();
+        assert!(completion.recv_blocking().unwrap().is_err());
+    }
     assert_eq!(std::fs::read_dir(output.path()).unwrap().count(), 0);
 }
