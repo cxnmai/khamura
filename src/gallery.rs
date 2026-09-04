@@ -5,6 +5,7 @@ use crate::config::Config;
 use gpui::{App, BorrowAppContext, RenderImage};
 use image::{Frame, ImageReader};
 use std::{
+    collections::{HashMap, HashSet},
     path::{Path, PathBuf},
     sync::Arc,
     time::SystemTime,
@@ -15,6 +16,7 @@ pub struct GalleryItem {
     pub path: PathBuf,
     pub is_video: bool,
     pub thumbnail: Option<Arc<RenderImage>>,
+    fingerprint: (u64, Option<SystemTime>),
 }
 
 #[derive(Default)]
@@ -22,7 +24,7 @@ pub struct GalleryStore {
     pub items: Vec<GalleryItem>,
     pub loading: bool,
     pub error: Option<String>,
-    revision: u64,
+    refresh_pending: bool,
     directory: Option<PathBuf>,
 }
 
@@ -44,42 +46,73 @@ impl GalleryStore {
 
     pub fn refresh(cx: &mut App) {
         let directory = cx.global::<Config>().photo_directory.clone();
-        let revision = cx.update_global::<Self, _>(|store, cx| {
+        // Coalesce saves/device changes while a thumbnail scan is running. Reuse its
+        // completed work in the follow-up scan instead of starting duplicate decoders.
+        let previous = cx.update_global::<Self, _>(|store, cx| {
+            if store.loading {
+                store.refresh_pending = true;
+                return None;
+            }
             if store.directory.as_ref() != Some(&directory) {
                 store.clear_images(cx);
                 store.directory = Some(directory.clone());
             }
-            store.revision += 1;
             store.loading = true;
             store.error = None;
-            store.revision
+            Some(store.items.clone())
         });
+        let Some(previous) = previous else { return };
+        let scanned_directory = directory.clone();
         let query = cx
             .background_executor()
-            .spawn(async move { scan(&directory) });
+            .spawn(async move { scan(&scanned_directory, &previous) });
         cx.spawn(async move |cx| {
             let result = query.await;
             let _ = cx.update(|cx| {
-                cx.update_global::<Self, _>(|store, cx| {
-                    if revision != store.revision {
-                        return;
-                    }
+                let changed_directory = cx.global::<Config>().photo_directory != directory;
+                let refresh_again = cx.update_global::<Self, _>(|store, cx| {
                     store.loading = false;
-                    store.clear_images(cx);
-                    match result {
-                        Ok(items) => store.items = items,
-                        Err(error) => {
-                            store.error = Some(error);
+                    if !changed_directory {
+                        match result {
+                            Ok(items) => {
+                                // Do not evict unchanged thumbnails from GPUI's GPU cache.
+                                let retained: HashSet<_> = items
+                                    .iter()
+                                    .filter_map(|item| item.thumbnail.as_ref().map(Arc::as_ptr))
+                                    .collect();
+                                for old in &store.items {
+                                    if let Some(image) = &old.thumbnail {
+                                        if !retained.contains(&Arc::as_ptr(image)) {
+                                            cx.drop_image(image.clone(), None);
+                                        }
+                                    }
+                                }
+                                store.items = items;
+                            }
+                            Err(error) => store.error = Some(error),
                         }
                     }
+                    std::mem::take(&mut store.refresh_pending) || changed_directory
                 });
+                if refresh_again {
+                    Self::refresh(cx);
+                }
             });
         })
         .detach();
     }
 }
 
-fn scan(directory: &Path) -> Result<Vec<GalleryItem>, String> {
+fn scan(directory: &Path, previous: &[GalleryItem]) -> Result<Vec<GalleryItem>, String> {
+    scan_with(directory, previous, thumbnail)
+}
+
+fn scan_with(
+    directory: &Path,
+    previous: &[GalleryItem],
+    mut extract: impl FnMut(&Path, bool) -> Option<Arc<RenderImage>>,
+) -> Result<Vec<GalleryItem>, String> {
+    let cached: HashMap<_, _> = previous.iter().map(|item| (&item.path, item)).collect();
     let entries = match std::fs::read_dir(directory) {
         Ok(entries) => entries,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
@@ -99,18 +132,29 @@ fn scan(directory: &Path) -> Result<Vec<GalleryItem>, String> {
             .metadata()
             .map_err(|error| format!("Could not read media: {error}"))?;
         if metadata.is_file() {
-            paths.push((metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH), path));
+            paths.push((
+                metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH),
+                path,
+                (metadata.len(), metadata.modified().ok()),
+            ));
         }
     }
     paths.sort_by(|a, b| b.cmp(a));
     Ok(paths
         .into_iter()
-        .map(|(_, path)| {
+        .map(|(_, path, fingerprint)| {
+            if let Some(item) = cached.get(&path)
+                && item.fingerprint == fingerprint
+                && fingerprint.1.is_some()
+            {
+                return (*item).clone();
+            }
             let is_video = path
                 .extension()
                 .is_some_and(|ext| ext.eq_ignore_ascii_case("mp4"));
             GalleryItem {
-                thumbnail: thumbnail(&path, is_video),
+                thumbnail: extract(&path, is_video),
+                fingerprint,
                 path,
                 is_video,
             }
@@ -158,7 +202,7 @@ mod tests {
             .unwrap();
         std::fs::write(directory.path().join("ignored.txt"), b"text").unwrap();
         std::fs::create_dir(directory.path().join("folder.png")).unwrap();
-        let photos = scan(directory.path()).unwrap();
+        let photos = scan(directory.path(), &[]).unwrap();
         assert_eq!(photos.len(), 3);
         assert_eq!(photos[0].path, newer);
         assert!(photos[0].thumbnail.is_none());
@@ -171,6 +215,10 @@ mod tests {
         assert_eq!(thumbnail.size(0).width.0, 240);
         assert_eq!(thumbnail.size(0).height.0, 120);
         assert_eq!(&thumbnail.as_bytes(0).unwrap()[..4], &[0, 0, 255, 255]);
-        assert!(scan(&directory.path().join("missing")).unwrap().is_empty());
+        assert!(
+            scan(&directory.path().join("missing"), &[])
+                .unwrap()
+                .is_empty()
+        );
     }
 }
