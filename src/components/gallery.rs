@@ -97,6 +97,11 @@ impl Render for Gallery {
             .on_key_down(cx.listener(|gallery, event: &gpui::KeyDownEvent, _, cx| {
                 match event.keystroke.key.as_str() {
                     "escape" => gallery.back(cx),
+                    "space" if !event.is_held && !gallery.options_open => {
+                        if let Some(player) = &gallery.player {
+                            player.update(cx, |player, cx| player.toggle(cx));
+                        }
+                    }
                     "left" | "right" => gallery.navigate(event.keystroke.key == "right", cx),
                     _ => return,
                 }
