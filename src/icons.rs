@@ -9,6 +9,9 @@ pub const SLIDERS_HORIZONTAL: &str = "icons/sliders-horizontal.svg";
 
 pub const TIMER: &str = "icons/timer.svg";
 pub const MIC: &str = "icons/mic.svg";
+pub const MIC_OFF: &str = "icons/mic-off.svg";
+pub const RATIO: &str = "icons/ratio.svg";
+pub const VIDEO_QUALITY: &str = "icons/video-quality.svg";
 pub const GRID: &str = "icons/grid.svg";
 
 pub struct LucideAssets;
@@ -22,6 +25,9 @@ impl AssetSource for LucideAssets {
             SLIDERS_HORIZONTAL => Some(include_bytes!("../assets/icons/sliders-horizontal.svg")),
             TIMER => Some(include_bytes!("../assets/icons/timer.svg")),
             MIC => Some(include_bytes!("../assets/icons/mic.svg")),
+            MIC_OFF => Some(include_bytes!("../assets/icons/mic-off.svg")),
+            RATIO => Some(include_bytes!("../assets/icons/ratio.svg")),
+            VIDEO_QUALITY => Some(include_bytes!("../assets/icons/video-quality.svg")),
             GRID => Some(include_bytes!("../assets/icons/grid.svg")),
             _ => None,
         };
