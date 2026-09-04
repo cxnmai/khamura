@@ -92,6 +92,8 @@ pub(super) fn audio(path: &Path, seconds: f64) -> Result<Process, String> {
             "-vn",
             "-nodisp",
             "-autoexit",
+            "-threads",
+            "1",
             "-ss",
             &seconds.to_string(),
             "-i",

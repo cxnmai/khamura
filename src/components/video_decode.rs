@@ -51,8 +51,8 @@ impl Playback {
 }
 fn decode(path: PathBuf, state: &Playback, tx: &Sender<Event>) -> Result<(), String> {
     let mut video = Process(runtime_tools::command(Tool::Ffmpeg)
-        .args(["-v", "error", "-nostdin", "-i"]).arg(&path)
-        .args(["-an", "-vf", "fps=24,scale=960:540:force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2", "-pix_fmt", "bgra", "-f", "rawvideo", "pipe:1"])
+        .args(["-v", "error", "-nostdin", "-threads", "2", "-filter_threads", "1", "-i"]).arg(&path)
+        .args(["-an", "-vf", "fps=24,scale=960:540:force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2", "-pix_fmt", "bgra", "-threads", "1", "-f", "rawvideo", "pipe:1"])
         .stdin(Stdio::null()).stderr(Stdio::null()).stdout(Stdio::piped()).spawn().map_err(|e| format!("Could not play video: {e}"))?);
     let audio_present = has_audio(&path, state)?;
     let mut audio = if audio_present {
@@ -61,6 +61,9 @@ fn decode(path: PathBuf, state: &Playback, tx: &Sender<Event>) -> Result<(), Str
         None
     };
     let mut stdout = video.0.stdout.take().unwrap();
+    // Best effort: avoid hundreds of tiny kernel pipe transfers per BGRA frame.
+    // SAFETY: stdout owns this live pipe descriptor; failure preserves its default.
+    unsafe { libc::fcntl(stdout.as_raw_fd(), libc::F_SETPIPE_SZ, 1024 * 1024) };
     let mut paused = false;
     let mut pixels = vec![0; (WIDTH * HEIGHT * 4) as usize];
     let mut offset = 0;
@@ -84,8 +87,9 @@ fn decode(path: PathBuf, state: &Playback, tx: &Sender<Event>) -> Result<(), Str
             std::thread::sleep(std::time::Duration::from_millis(30));
             continue;
         }
-        if Instant::now() < next_frame {
-            std::thread::sleep(Duration::from_millis(3));
+        if let Some(wait) = next_frame.checked_duration_since(Instant::now()) {
+            // Sleep to the frame deadline, but still react to pause/close promptly.
+            std::thread::sleep(wait.min(Duration::from_millis(20)));
             continue;
         }
         if progress.elapsed() > Duration::from_secs(10) {
@@ -119,7 +123,10 @@ fn decode(path: PathBuf, state: &Playback, tx: &Sender<Event>) -> Result<(), Str
         if offset == pixels.len() {
             next_frame += Duration::from_secs_f64(1. / 24.);
             frames += 1;
-            let _ = tx.try_send(Event::Frame(pixels.clone()));
+            // A hidden/busy UI must not copy megabytes merely to drop the frame.
+            if !tx.is_full() {
+                let _ = tx.try_send(Event::Frame(pixels.clone()));
+            }
             offset = 0;
         }
     }
