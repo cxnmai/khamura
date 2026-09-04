@@ -7,6 +7,7 @@ impl Gallery {
         div()
             .id("gallery-filmstrip")
             .h(px(76.))
+            .w_full()
             .flex_shrink_0()
             .min_w_0()
             .flex()
