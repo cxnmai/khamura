@@ -49,13 +49,13 @@ impl GalleryStore {
         // Coalesce saves/device changes while a thumbnail scan is running. Reuse its
         // completed work in the follow-up scan instead of starting duplicate decoders.
         let previous = cx.update_global::<Self, _>(|store, cx| {
-            if store.loading {
-                store.refresh_pending = true;
-                return None;
-            }
             if store.directory.as_ref() != Some(&directory) {
                 store.clear_images(cx);
                 store.directory = Some(directory.clone());
+            }
+            if store.loading {
+                store.refresh_pending = true;
+                return None;
             }
             store.loading = true;
             store.error = None;
