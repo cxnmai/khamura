@@ -130,7 +130,10 @@ mod tests {
         assert_eq!(photos[0].path, newer);
         assert!(photos[0].thumbnail.is_none());
         assert_eq!(photos[1].path, older);
-        assert!(photos[1].thumbnail.is_some());
+        let thumbnail = photos[1].thumbnail.as_ref().unwrap();
+        assert_eq!(thumbnail.size(0).width.0, 240);
+        assert_eq!(thumbnail.size(0).height.0, 120);
+        assert_eq!(&thumbnail.as_bytes(0).unwrap()[..4], &[0, 0, 255, 255]);
         assert!(scan(&directory.path().join("missing")).unwrap().is_empty());
     }
 }
