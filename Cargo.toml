@@ -2,6 +2,14 @@
 name = "khamura"
 version = "0.1.0"
 edition = "2024"
+description = "A minimal Linux camera app with photo, video, and gallery support"
+repository = "https://github.com/cxnmai/khamura"
+license-file = "LICENSE"
+
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }-v{ version }.tar.gz"
+pkg-fmt = "tgz"
+bin-dir = "{ name }-{ target }-v{ version }/{ bin }{ binary-ext }"
 
 [dependencies]
 gpui = "0.2.2"
