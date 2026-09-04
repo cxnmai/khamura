@@ -10,7 +10,16 @@ pub(super) fn thumbnail(path: &Path) -> Option<image::DynamicImage> {
     let directory = tempfile::tempdir().ok()?;
     let output = directory.path().join("thumbnail.png");
     let mut child = runtime_tools::command(Tool::Ffmpeg)
-        .args(["-nostdin", "-v", "error", "-threads", "1", "-i"])
+        .args([
+            "-nostdin",
+            "-v",
+            "error",
+            "-threads",
+            "1",
+            "-filter_threads",
+            "1",
+            "-i",
+        ])
         .arg(path)
         .args([
             "-map",
