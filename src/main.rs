@@ -1,8 +1,10 @@
 mod capture_settings;
+mod cli;
 mod components;
 mod config;
 mod config_location;
 mod config_store;
+mod desktop;
 mod device_catalog;
 mod gallery;
 mod icons;
@@ -15,6 +17,9 @@ use components::camera::Camera;
 use gpui::{App, AppContext, Application, WindowBackgroundAppearance, WindowOptions};
 
 fn main() {
+    if let Some(status) = cli::handle() {
+        std::process::exit(status);
+    }
     let config = config::Config::load().unwrap_or_else(|error| {
         eprintln!("Configuration error: {error}");
         std::process::exit(1);
