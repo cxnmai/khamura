@@ -10,11 +10,17 @@ pub(super) fn preview(cx: &mut Context<Toolbar>) -> impl IntoElement {
         .items
         .first()
         .and_then(|item| item.thumbnail.clone());
+    let video = cx
+        .global::<GalleryStore>()
+        .items
+        .first()
+        .is_some_and(|item| item.is_video);
     let busy = cx.global::<CaptureSettings>().busy;
     let ink = super::super::settings::foreground(cx.global::<SessionSettings>().theme_color);
     div()
         .id("gallery-preview")
         .tab_index(0)
+        .relative()
         .size(px(34.))
         .flex_shrink_0()
         .rounded(px(7.))
@@ -54,5 +60,25 @@ pub(super) fn preview(cx: &mut Context<Toolbar>) -> impl IntoElement {
         })
         .when_some(thumbnail, |view, image| {
             view.child(img(image).size_full().object_fit(ObjectFit::Cover))
+        })
+        .when(video, |view| {
+            view.child(
+                div()
+                    .absolute()
+                    .bottom(px(2.))
+                    .right(px(2.))
+                    .size(px(13.))
+                    .rounded_full()
+                    .bg(gpui::black().opacity(0.55))
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .child(
+                        svg()
+                            .path(crate::icons::PLAY)
+                            .size(px(8.))
+                            .text_color(gpui::white()),
+                    ),
+            )
         })
 }
