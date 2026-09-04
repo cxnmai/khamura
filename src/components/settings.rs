@@ -100,6 +100,10 @@ impl Render for Settings {
                             })),
                     ),
             )
+            .child(super::mirror_control::mirror_control(
+                settings.mirror,
+                foreground,
+            ))
             .child(super::theme_palette::theme_palette(
                 selected_color,
                 foreground,

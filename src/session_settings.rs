@@ -14,6 +14,7 @@ pub enum CameraFit {
 /// Live UI preferences, persisted after discrete changes or a completed drag.
 pub struct SessionSettings {
     pub fit: CameraFit,
+    pub mirror: bool,
     pub theme_color: Rgb,
     pub background_opacity: f32,
     pub save_error: Option<String>,
@@ -58,6 +59,7 @@ impl SessionSettings {
             settings.fit,
             settings.theme_color,
             settings.background_opacity,
+            settings.mirror,
         );
         cx.update_global::<Self, _>(|settings, _| {
             settings.save_error = result.err();
@@ -70,6 +72,7 @@ impl From<&Config> for SessionSettings {
     fn from(config: &Config) -> Self {
         Self {
             fit: config.preview_fit,
+            mirror: config.mirror,
             theme_color: config.theme_color,
             background_opacity: config.background_opacity,
             save_error: None,

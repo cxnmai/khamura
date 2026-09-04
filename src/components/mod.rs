@@ -1,5 +1,6 @@
 pub mod camera;
 mod camera_capture;
+mod mirror_control;
 mod opacity_slider;
 mod path_label;
 mod path_settings;
