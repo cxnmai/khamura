@@ -57,6 +57,26 @@ mod tests {
     }
 
     #[test]
+    fn fallback_formats_match_previous_rgb_conversion() {
+        for (format, data) in [
+            (FrameFormat::RAWRGB, vec![10, 20, 30, 40, 50, 60].repeat(2)),
+            (FrameFormat::RAWBGR, vec![30, 20, 10, 60, 50, 40].repeat(2)),
+            (FrameFormat::GRAY, vec![16, 80, 140, 235]),
+            (FrameFormat::YUYV, vec![16, 100, 235, 140].repeat(2)),
+            (FrameFormat::NV12, vec![16, 80, 140, 235, 100, 140]),
+        ] {
+            let buffer = Buffer::new(Resolution::new(2, 2), &data, format);
+            let rgb = buffer.decode_image::<RgbFormat>().unwrap();
+            let expected: Vec<u8> = rgb
+                .as_raw()
+                .chunks_exact(3)
+                .flat_map(|p| [p[2], p[1], p[0], 255])
+                .collect();
+            assert_eq!(decode(&buffer).unwrap().pixels, expected, "{format}");
+        }
+    }
+
+    #[test]
     fn jpeg_fast_path_matches_rgb_decoder_without_resampling() {
         let mut encoder = mozjpeg::Compress::new(mozjpeg::ColorSpace::JCS_RGB);
         encoder.set_size(9, 6);
