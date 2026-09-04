@@ -1,5 +1,6 @@
 use super::{
     camera_capture::{CapturedFrame, capture_frames},
+    preview_frame::render_image,
     settings::{Settings, SettingsDismissed},
     toolbar::{SettingsToggled, Toolbar},
 };
@@ -9,7 +10,7 @@ use gpui::{
     Context, Entity, FocusHandle, Focusable, IntoElement, MouseButton, ObjectFit, Render,
     RenderImage, Size, Subscription, Task, WeakEntity, Window, div, img, prelude::*, px, size,
 };
-use image::{Frame, ImageBuffer, Rgba};
+use image::RgbaImage;
 use std::{
     sync::{
         Arc,
@@ -20,6 +21,8 @@ use std::{
 
 pub struct Camera {
     frame: Option<Arc<RenderImage>>,
+    source_frame: Option<RgbaImage>,
+    rendered_mirror: bool,
     status: String,
     settings: Entity<Settings>,
     settings_open: bool,
@@ -48,12 +51,19 @@ impl Camera {
             cx.subscribe(&settings, |camera, _, _: &SettingsDismissed, cx| {
                 camera.set_settings_open(false, cx);
             });
-        cx.observe_global::<SessionSettings>(|_, cx| cx.notify())
-            .detach();
+        cx.observe_global::<SessionSettings>(|camera, cx| {
+            if camera.rendered_mirror != cx.global::<SessionSettings>().mirror {
+                camera.refresh_preview(cx);
+            }
+            cx.notify();
+        })
+        .detach();
         thread::spawn(move || capture_frames(sender, capture_stop));
 
         Self {
             frame: None,
+            source_frame: None,
+            rendered_mirror: cx.global::<SessionSettings>().mirror,
             status: "Starting camera…".into(),
             settings,
             settings_open: false,
@@ -102,11 +112,11 @@ impl Camera {
                     .update(&mut *cx, |camera, cx| {
                         match message {
                             Ok(frame) => {
-                                if let Some(image) = render_image(frame) {
-                                    let previous_frame = camera.frame.replace(Arc::new(image));
-                                    if let Some(previous_frame) = previous_frame {
-                                        cx.drop_image(previous_frame, None);
-                                    }
+                                if let Some(source) =
+                                    RgbaImage::from_raw(frame.width, frame.height, frame.pixels)
+                                {
+                                    camera.source_frame = Some(source);
+                                    camera.refresh_preview(cx);
                                     camera.status.clear();
                                 }
                             }
@@ -123,6 +133,16 @@ impl Camera {
                 }
             }
         })
+    }
+
+    fn refresh_preview(&mut self, cx: &mut Context<Self>) {
+        self.rendered_mirror = cx.global::<SessionSettings>().mirror;
+        if let Some(source) = &self.source_frame {
+            let image = Arc::new(render_image(source, self.rendered_mirror));
+            if let Some(previous_frame) = self.frame.replace(image) {
+                cx.drop_image(previous_frame, None);
+            }
+        }
     }
 
     fn set_settings_open(&mut self, open: bool, cx: &mut Context<Self>) {
@@ -216,10 +236,4 @@ impl Drop for Camera {
     fn drop(&mut self) {
         self.stop_capture.store(true, Ordering::Relaxed);
     }
-}
-
-fn render_image(frame: CapturedFrame) -> Option<RenderImage> {
-    let buffer =
-        ImageBuffer::<Rgba<u8>, Vec<u8>>::from_raw(frame.width, frame.height, frame.pixels)?;
-    Some(RenderImage::new(vec![Frame::new(buffer)]))
 }
