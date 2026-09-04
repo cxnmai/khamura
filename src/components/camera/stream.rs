@@ -61,10 +61,12 @@ impl Camera {
         } else {
             None
         };
-        if prefs.camera_device != self.request.device || quality != self.request.quality {
+        let save_error = prefs.save_error.clone();
+        let device = prefs.camera_device.clone();
+        if device != self.request.device || quality != self.request.quality {
             self.request = CaptureRequest {
                 revision: self.request.revision + 1,
-                device: prefs.camera_device.clone(),
+                device,
                 quality,
             };
             self.capture_ready = false;
@@ -75,7 +77,7 @@ impl Camera {
             self.status = "Opening camera…".into();
             let _ = self.requests.try_send(self.request.clone());
         }
-        if let Some(error) = &prefs.save_error {
+        if let Some(error) = &save_error {
             self.error = Some(format!("Could not save capture settings: {error}"));
         }
         self.refresh_preview(cx);

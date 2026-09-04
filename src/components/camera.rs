@@ -1,6 +1,6 @@
 mod actions;
-mod overlays;
 mod error_popup;
+mod overlays;
 mod stream;
 mod view;
 
@@ -169,7 +169,15 @@ impl Camera {
     fn refresh_preview(&mut self, cx: &mut Context<Self>) {
         self.rendered_mirror = cx.global::<SessionSettings>().mirror;
         if let Some(source) = &self.source_frame {
-            let image = Arc::new(render_image(source, self.rendered_mirror));
+            let prefs = cx.global::<CaptureSettings>();
+            let aspect = if prefs.mode == CameraMode::Photo {
+                prefs.aspect
+            } else {
+                PhotoAspect::Native
+            };
+            let (x, y, w, h) = crate::media::crop_bounds(source.width(), source.height(), aspect);
+            let cropped = image::imageops::crop_imm(source.as_ref(), x, y, w, h).to_image();
+            let image = Arc::new(render_image(&cropped, self.rendered_mirror));
             if let Some(previous_frame) = self.frame.replace(image) {
                 cx.drop_image(previous_frame, None);
             }
