@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Khamura</title>
+  <desc id="desc">Six ivory aperture blades with one blue-gray accent, surrounding a dark hexagonal opening on a charcoal rounded tile.</desc>
+  <rect x="16" y="16" width="480" height="480" rx="108" fill="#242830"/>
+  <g transform="translate(256 256)" fill="#F4F0E8" stroke="#242830" stroke-width="7" stroke-linejoin="round">
+    <path d="M54 0 134.341-94.067A164 164 0 0 1 148.634 69.309L27 46.765Z" fill="#88A6B8"/>
+    <path d="M54 0 134.341-94.067A164 164 0 0 1 148.634 69.309L27 46.765Z" transform="rotate(60)"/>
+    <path d="M54 0 134.341-94.067A164 164 0 0 1 148.634 69.309L27 46.765Z" transform="rotate(120)"/>
+    <path d="M54 0 134.341-94.067A164 164 0 0 1 148.634 69.309L27 46.765Z" transform="rotate(180)"/>
+    <path d="M54 0 134.341-94.067A164 164 0 0 1 148.634 69.309L27 46.765Z" transform="rotate(240)"/>
+    <path d="M54 0 134.341-94.067A164 164 0 0 1 148.634 69.309L27 46.765Z" transform="rotate(300)"/>
+  </g>
+</svg>
