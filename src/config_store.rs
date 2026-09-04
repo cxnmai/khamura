@@ -43,6 +43,10 @@ pub(crate) fn save(
     );
     let updated = document.to_string();
     Config::parse(&updated, home)?;
+    write_atomic(path, &updated)
+}
+
+pub(crate) fn write_atomic(path: &Path, updated: &str) -> Result<(), String> {
     let parent = path.parent().ok_or("configuration path has no parent")?;
     fs::create_dir_all(parent).map_err(|error| error.to_string())?;
     let mut pending = tempfile::NamedTempFile::new_in(parent).map_err(|error| error.to_string())?;
@@ -63,7 +67,7 @@ pub(crate) fn save(
     Ok(())
 }
 
-fn set(document: &mut DocumentMut, key: &str, mut value: Value) {
+pub(crate) fn set(document: &mut DocumentMut, key: &str, mut value: Value) {
     if let Some(previous) = document.get(key).and_then(|item| item.as_value()) {
         *value.decor_mut() = previous.decor().clone();
     }
@@ -73,3 +77,16 @@ fn set(document: &mut DocumentMut, key: &str, mut value: Value) {
 #[cfg(test)]
 #[path = "config_store_tests.rs"]
 mod tests;
+
+pub(crate) fn save_output(path: &Path, home: &Path, output: &Path) -> Result<(), String> {
+    let original = match fs::read_to_string(path) {
+        Ok(text) => text,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
+        Err(error) => return Err(error.to_string()),
+    };
+    Config::parse(&original, home)?;
+    let mut document = original.parse::<DocumentMut>().map_err(|error| error.to_string())?;
+    let output = output.to_str().ok_or("output path must be valid UTF-8")?;
+    set(&mut document, "photo_directory", Value::from(output));
+    write_atomic(path, &document.to_string())
+}
