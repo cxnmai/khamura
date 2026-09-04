@@ -59,7 +59,7 @@ mod tests {
     use super::*;
     #[test]
     fn nix_helpers_launch_without_a_shell_path() {
-        for tool in [Tool::Pactl, Tool::Ffmpeg] {
+        for tool in [Tool::Pactl, Tool::Ffmpeg, Tool::Ffplay, Tool::Ffprobe] {
             if tool.built_path().is_none() {
                 continue;
             }
