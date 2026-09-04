@@ -1,6 +1,7 @@
 mod components;
 mod config;
 mod icons;
+mod session_settings;
 mod theme;
 
 use components::camera::Camera;
@@ -14,6 +15,7 @@ fn main() {
     Application::new()
         .with_assets(icons::LucideAssets)
         .run(move |cx: &mut App| {
+            cx.set_global(session_settings::SessionSettings::from(&config));
             cx.set_global(config);
             cx.open_window(
                 WindowOptions {
