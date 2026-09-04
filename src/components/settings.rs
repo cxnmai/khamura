@@ -39,13 +39,6 @@ impl Render for Settings {
             ("preview-fit", "Fit", CameraFit::Contain),
             ("preview-fill", "Fill", CameraFit::Cover),
         ];
-        let swatches = [
-            ("color-black", Rgb::new(0, 0, 0)),
-            ("color-slate", Rgb::new(45, 55, 72)),
-            ("color-blue", Rgb::new(30, 58, 95)),
-            ("color-plum", Rgb::new(70, 42, 65)),
-            ("color-cream", Rgb::new(232, 227, 216)),
-        ];
         div()
             .id("settings-panel")
             .track_focus(&self.focus)
@@ -98,43 +91,16 @@ impl Render for Settings {
                                     .when(selected, |button| button.bg(foreground.opacity(0.18)))
                                     .hover(|style| style.bg(foreground.opacity(0.12)))
                                     .on_click(move |_, _, cx| {
-                                        cx.update_global::<SessionSettings, _>(|settings, _| {
-                                            settings.fit = fit
-                                        });
+                                        SessionSettings::change(cx, |settings| settings.fit = fit);
                                     })
                                     .child(label)
                             })),
                     ),
             )
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap(px(10.))
-                    .child("Appearance")
-                    .child(div().flex().gap(px(10.)).children(swatches.into_iter().map(
-                        |(id, color)| {
-                            div()
-                                .id(id)
-                                .size(px(30.))
-                                .rounded_full()
-                                .cursor_pointer()
-                                .border_2()
-                                .border_color(if selected_color == color {
-                                    foreground
-                                } else {
-                                    foreground.opacity(0.25)
-                                })
-                                .bg(color.to_gpui(1.))
-                                .hover(|style| style.border_color(foreground))
-                                .on_click(move |_, _, cx| {
-                                    cx.update_global::<SessionSettings, _>(|settings, _| {
-                                        settings.theme_color = color
-                                    });
-                                })
-                        },
-                    ))),
-            )
+            .child(super::theme_palette::theme_palette(
+                selected_color,
+                foreground,
+            ))
             .child(
                 div()
                     .flex()
@@ -149,12 +115,7 @@ impl Render for Settings {
                     )
                     .child(self.opacity.clone()),
             )
-            .child(
-                div()
-                    .text_xs()
-                    .text_color(foreground.opacity(0.6))
-                    .child("Changes apply for this session"),
-            )
+            .child(super::save_status::save_status(settings, foreground))
     }
 }
 pub(super) fn foreground(color: Rgb) -> gpui::Hsla {

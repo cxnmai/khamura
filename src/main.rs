@@ -1,5 +1,6 @@
 mod components;
 mod config;
+mod config_store;
 mod icons;
 mod session_settings;
 mod theme;
