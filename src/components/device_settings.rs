@@ -159,8 +159,14 @@ impl DeviceSettings {
     }
 
     fn toggle(&mut self, camera: bool, cx: &mut Context<Self>) {
-        if cx.global::<CaptureSettings>().busy { return; }
-        self.open = if self.open == Some(camera) { None } else { Some(camera) };
+        if cx.global::<CaptureSettings>().busy {
+            return;
+        }
+        self.open = if self.open == Some(camera) {
+            None
+        } else {
+            Some(camera)
+        };
         cx.notify();
     }
 
@@ -170,7 +176,9 @@ impl DeviceSettings {
                 settings.camera_device = id;
                 settings.quality = None;
                 settings.qualities.clear();
-            } else { settings.microphone_device = id; }
+            } else {
+                settings.microphone_device = id;
+            }
         });
         self.open = None;
         cx.notify();
@@ -179,12 +187,29 @@ impl DeviceSettings {
 
 impl Render for DeviceSettings {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        div().flex().flex_col().gap(px(12.))
+        div()
+            .flex()
+            .flex_col()
+            .gap(px(12.))
             .child(self.selector(true, cx))
             .child(self.selector(false, cx))
-            .child(div().id("refresh-devices").text_xs().cursor_pointer()
-                .child(if self.loading { "Finding devices…" } else { "Refresh devices" })
-                .on_click(cx.listener(|this, _, _, cx| this.refresh(cx))))
-            .children(self.catalog.errors.iter().map(|error| div().text_xs().child(error.clone())))
+            .child(
+                div()
+                    .id("refresh-devices")
+                    .text_xs()
+                    .cursor_pointer()
+                    .child(if self.loading {
+                        "Finding devices…"
+                    } else {
+                        "Refresh devices"
+                    })
+                    .on_click(cx.listener(|this, _, _, cx| this.refresh(cx))),
+            )
+            .children(
+                self.catalog
+                    .errors
+                    .iter()
+                    .map(|error| div().text_xs().child(error.clone())),
+            )
     }
 }
