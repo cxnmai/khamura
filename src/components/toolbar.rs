@@ -1,15 +1,18 @@
+#[path = "toolbar_controls.rs"]
+mod controls;
 #[path = "toolbar_style.rs"]
 mod style;
 use style::*;
 use crate::{
     icons::{APERTURE, CIRCLE_STOP, SLIDERS_HORIZONTAL, VIDEO},
     session_settings::SessionSettings,
+    capture_settings::{CaptureSettings, CameraMode},
 };
 use gpui::{
-    App, ClickEvent, Context, EventEmitter, IntoElement, Render, Window, div, prelude::*, px, svg,
+    ClickEvent, Context, EventEmitter, IntoElement, Render, Window, div, prelude::*, px,
 };
 
-const BAR_WIDTH: f32 = 280.0;
+pub const BAR_WIDTH: f32 = 420.0;
 const BAR_HEIGHT: f32 = 48.0;
 const TOGGLE_HEIGHT: f32 = 40.0;
 const END_SIZE: f32 = 40.0;
@@ -17,17 +20,12 @@ const ICON_SIZE: f32 = 24.0;
 const SETTINGS_ICON_SIZE: f32 = 18.0;
 const WELL_INSET: f32 = 4.0;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum CameraMode {
-    Photo,
-    Video,
-}
+pub struct CaptureRequested;
 
 pub struct SettingsToggled;
 
 pub struct Toolbar {
-    selected_mode: CameraMode,
-    active: bool,
+    controls: gpui::Entity<controls::ToolbarControls>,
     settings_open: bool,
 }
 
@@ -35,21 +33,22 @@ impl Toolbar {
     pub fn new(cx: &mut Context<Self>) -> Self {
         cx.observe_global::<SessionSettings>(|_, cx| cx.notify())
             .detach();
+        cx.observe_global::<CaptureSettings>(|_, cx| cx.notify()).detach();
         Self {
-            selected_mode: CameraMode::Photo,
-            active: false,
+            controls: cx.new(controls::ToolbarControls::new),
             settings_open: false,
         }
     }
 
     fn select_or_toggle(&mut self, mode: CameraMode, cx: &mut Context<Self>) {
-        if self.selected_mode == mode {
-            self.active = !self.active;
-        } else {
-            self.selected_mode = mode;
-            self.active = false;
+        let state = cx.global::<CaptureSettings>();
+        if state.mode == mode {
+            if !state.busy || state.recording {
+                cx.emit(CaptureRequested);
+            }
+        } else if !state.busy {
+            CaptureSettings::change(cx, |settings| settings.mode = mode);
         }
-        cx.notify();
     }
 
     fn on_photo_click(&mut self, _: &ClickEvent, _: &mut Window, cx: &mut Context<Self>) {
@@ -71,24 +70,19 @@ impl Toolbar {
 }
 
 impl EventEmitter<SettingsToggled> for Toolbar {}
+impl EventEmitter<CaptureRequested> for Toolbar {}
 
 impl Render for Toolbar {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let photo_selected = self.selected_mode == CameraMode::Photo;
-        let photo_active = photo_selected && self.active;
-        let video_selected = self.selected_mode == CameraMode::Video;
-        let video_active = video_selected && self.active;
+        let capture = cx.global::<CaptureSettings>();
+        let photo_selected = capture.mode == CameraMode::Photo;
+        let video_selected = capture.mode == CameraMode::Video;
+        let video_active = capture.recording;
 
         let bar_color = cx.global::<SessionSettings>().theme_color.to_gpui(1.0);
         let well_color = darken_color(bar_color);
         let theme_icon = contrasting_icon_color(well_color);
-        let photo_circle = photo_selected.then(|| {
-            if photo_active {
-                gpui::white().opacity(0.65)
-            } else {
-                gpui::white()
-            }
-        });
+        let photo_circle = photo_selected.then(gpui::white);
         let video_circle = video_selected.then(|| {
             if video_active {
                 gpui::red()
@@ -162,6 +156,7 @@ impl Render for Toolbar {
         // Add future controls to this list; the outer pill lays them out consistently.
         let bar_elements = vec![
             mode_toggle.into_any_element(),
+            self.controls.clone().into_any_element(),
             settings_button.into_any_element(),
         ];
 
