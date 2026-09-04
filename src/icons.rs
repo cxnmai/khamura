@@ -14,6 +14,9 @@ pub const RATIO: &str = "icons/ratio.svg";
 pub const VIDEO_QUALITY: &str = "icons/video-quality.svg";
 pub const GRID: &str = "icons/grid.svg";
 
+pub const ARROW_LEFT: &str = "icons/arrow-left.svg";
+pub const IMAGE: &str = "icons/image.svg";
+
 pub struct LucideAssets;
 
 impl AssetSource for LucideAssets {
@@ -29,6 +32,8 @@ impl AssetSource for LucideAssets {
             RATIO => Some(include_bytes!("../assets/icons/ratio.svg")),
             VIDEO_QUALITY => Some(include_bytes!("../assets/icons/video-quality.svg")),
             GRID => Some(include_bytes!("../assets/icons/grid.svg")),
+            ARROW_LEFT => Some(include_bytes!("../assets/icons/arrow-left.svg")),
+            IMAGE => Some(include_bytes!("../assets/icons/image.svg")),
             _ => None,
         };
 

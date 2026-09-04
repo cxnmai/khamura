@@ -1,6 +1,8 @@
 use std::{cell::Cell, rc::Rc};
 #[path = "toolbar_controls.rs"]
 mod controls;
+#[path = "toolbar_gallery.rs"]
+mod gallery;
 #[path = "toolbar_style.rs"]
 mod style;
 use crate::{
@@ -11,7 +13,7 @@ use crate::{
 use gpui::{ClickEvent, Context, EventEmitter, IntoElement, Render, Window, div, prelude::*, px};
 use style::*;
 
-pub const BAR_WIDTH: f32 = 296.0;
+pub const BAR_WIDTH: f32 = 344.0;
 const BAR_HEIGHT: f32 = 48.0;
 const TOGGLE_HEIGHT: f32 = 40.0;
 const END_SIZE: f32 = 40.0;
@@ -22,6 +24,7 @@ const WELL_INSET: f32 = 4.0;
 pub struct CaptureRequested;
 
 pub struct SettingsToggled;
+pub struct GalleryRequested;
 
 pub struct Toolbar {
     controls: gpui::Entity<controls::ToolbarControls>,
@@ -34,6 +37,8 @@ impl Toolbar {
         cx.observe_global::<SessionSettings>(|_, cx| cx.notify())
             .detach();
         cx.observe_global::<CaptureSettings>(|_, cx| cx.notify())
+            .detach();
+        cx.observe_global::<crate::gallery::GalleryStore>(|_, cx| cx.notify())
             .detach();
         Self {
             controls: cx.new(controls::ToolbarControls::new),
@@ -81,6 +86,7 @@ impl Toolbar {
 
 impl EventEmitter<SettingsToggled> for Toolbar {}
 impl EventEmitter<CaptureRequested> for Toolbar {}
+impl EventEmitter<GalleryRequested> for Toolbar {}
 
 impl Render for Toolbar {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
@@ -177,6 +183,7 @@ impl Render for Toolbar {
         let bar_elements = vec![
             mode_toggle.into_any_element(),
             self.controls.clone().into_any_element(),
+            gallery::preview(cx).into_any_element(),
             settings_button.into_any_element(),
         ];
 
