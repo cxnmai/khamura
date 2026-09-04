@@ -36,7 +36,7 @@ impl Focusable for Settings {
 }
 impl EventEmitter<SettingsDismissed> for Settings {}
 impl Render for Settings {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let settings = cx.global::<SessionSettings>();
         let selected_fit = settings.fit;
         let selected_color = settings.theme_color;
@@ -58,7 +58,7 @@ impl Render for Settings {
             .occlude()
             .w(px(280.))
             .max_w_full()
-            .max_h_full()
+            .max_h((window.viewport_size().height - px(100.)).max(px(0.)))
             .overflow_y_scroll()
             .p(px(16.))
             .rounded(px(20.))

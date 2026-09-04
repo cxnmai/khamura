@@ -143,6 +143,7 @@ impl Camera {
     }
 
     fn settings_overlay(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let trigger = self.toolbar.read(cx).settings_bounds();
         div()
             .absolute()
             .size_full()
@@ -154,15 +155,10 @@ impl Camera {
                 }),
             ))
             .child(
-                div()
-                    .absolute()
-                    .top(px(16.))
-                    .bottom(px(84.))
-                    .left_0()
-                    .right_0()
-                    .flex()
-                    .justify_center()
-                    .items_end()
+                gpui::anchored()
+                    .anchor(gpui::Corner::BottomRight)
+                    .position(gpui::point(trigger.right(), trigger.top() - px(12.)))
+                    .snap_to_window_with_margin(px(8.))
                     .child(self.settings.clone()),
             )
     }

@@ -1,3 +1,4 @@
+use std::{cell::Cell, rc::Rc};
 #[path = "toolbar_controls.rs"]
 mod controls;
 #[path = "toolbar_style.rs"]
@@ -25,6 +26,7 @@ pub struct SettingsToggled;
 pub struct Toolbar {
     controls: gpui::Entity<controls::ToolbarControls>,
     settings_open: bool,
+    settings_bounds: Rc<Cell<gpui::Bounds<gpui::Pixels>>>,
 }
 
 impl Toolbar {
@@ -36,6 +38,7 @@ impl Toolbar {
         Self {
             controls: cx.new(controls::ToolbarControls::new),
             settings_open: false,
+            settings_bounds: Rc::new(Cell::new(gpui::Bounds::default())),
         }
     }
 
@@ -56,6 +59,10 @@ impl Toolbar {
 
     fn on_video_click(&mut self, _: &ClickEvent, _: &mut Window, cx: &mut Context<Self>) {
         self.select_or_toggle(CameraMode::Video, cx);
+    }
+
+    pub fn settings_bounds(&self) -> gpui::Bounds<gpui::Pixels> {
+        self.settings_bounds.get()
     }
 
     pub fn set_settings_open(&mut self, open: bool, cx: &mut Context<Self>) {
@@ -140,13 +147,23 @@ impl Render for Toolbar {
         } else {
             theme_icon.opacity(0.55)
         };
+        let settings_bounds = self.settings_bounds.clone();
         let settings_button = div()
+            .relative()
             .size(px(TOGGLE_HEIGHT))
             .rounded_full()
             .flex()
             .items_center()
             .justify_center()
             .bg(well_color)
+            .child(
+                gpui::canvas(
+                    move |bounds, _, _| settings_bounds.set(bounds),
+                    |_, _, _, _| {},
+                )
+                .absolute()
+                .size_full(),
+            )
             .child(mode_button(
                 "settings-toggle",
                 None,

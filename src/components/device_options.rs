@@ -53,7 +53,7 @@ pub(super) fn popup(
                     .w(bounds.size.width)
                     .max_h(height)
                     .overflow_y_scroll()
-                    .bg(theme)
+                    .bg(theme.to_gpui(1.))
                     .text_color(ink)
                     .rounded(px(6.))
                     .border_1()
