@@ -91,6 +91,14 @@ fn record(
     let mut frames_written = 0_u64;
     let mut stop_deadline = None;
     loop {
+        if let Some(stop_time) = *stopped.lock().unwrap() {
+            let target = (stop_time.saturating_duration_since(started).as_secs_f64()
+                * f64::from(fps))
+            .ceil() as u64;
+            if frames_written >= target.max(1) {
+                break;
+            }
+        }
         let frame = latest.lock().unwrap().clone();
         let mut bytes = frame.as_raw().as_slice();
         while !bytes.is_empty() {
@@ -114,18 +122,10 @@ fn record(
             }
         }
         frames_written += 1;
-        if let Some(stop_time) = *stopped.lock().unwrap() {
-            let target = (stop_time.saturating_duration_since(started).as_secs_f64()
-                * f64::from(fps))
-            .ceil() as u64;
-            if frames_written >= target.max(1) {
-                break;
-            }
-        }
         next += period;
         // Never queue stale frames: repeat the latest image at each output timestamp.
         // If encoding falls behind, catch up using current frames to retain wall-clock duration.
-        while Instant::now() < next && !stopped.lock().unwrap().is_some() {
+        while Instant::now() < next && stopped.lock().unwrap().is_none() {
             std::thread::sleep(
                 next.saturating_duration_since(Instant::now())
                     .min(Duration::from_millis(5)),
