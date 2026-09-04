@@ -10,6 +10,7 @@ pub enum Tool {
     Pactl,
     Ffmpeg,
     Ffplay,
+    Ffprobe,
 }
 
 impl Tool {
@@ -18,6 +19,7 @@ impl Tool {
             Self::Pactl => "pactl",
             Self::Ffmpeg => "ffmpeg",
             Self::Ffplay => "ffplay",
+            Self::Ffprobe => "ffprobe",
         }
     }
     fn variable(self) -> &'static str {
@@ -25,6 +27,7 @@ impl Tool {
             Self::Pactl => "KHAMURA_PACTL",
             Self::Ffmpeg => "KHAMURA_FFMPEG",
             Self::Ffplay => "KHAMURA_FFPLAY",
+            Self::Ffprobe => "KHAMURA_FFPROBE",
         }
     }
     fn built_path(self) -> Option<&'static str> {
@@ -32,6 +35,7 @@ impl Tool {
             Self::Pactl => option_env!("KHAMURA_PACTL"),
             Self::Ffmpeg => option_env!("KHAMURA_FFMPEG"),
             Self::Ffplay => option_env!("KHAMURA_FFPLAY"),
+            Self::Ffprobe => option_env!("KHAMURA_FFPROBE"),
         }
     }
 }

@@ -2,6 +2,8 @@ use crate::{gallery::GalleryStore, icons, session_settings::SessionSettings};
 use gpui::{App, Context, EventEmitter, FocusHandle, Focusable, Window, div, prelude::*, px, svg};
 use std::path::PathBuf;
 
+#[path = "gallery_actions.rs"]
+mod actions;
 #[path = "gallery_content.rs"]
 mod content;
 
@@ -10,6 +12,10 @@ pub struct Gallery {
     focus: FocusHandle,
     focus_pending: bool,
     selected: Option<PathBuf>,
+    player: Option<gpui::Entity<super::video_player::VideoPlayer>>,
+    options_open: bool,
+    action_notice: Option<String>,
+    copy_busy: bool,
 }
 
 impl Gallery {
@@ -22,10 +28,36 @@ impl Gallery {
             focus: cx.focus_handle(),
             focus_pending: true,
             selected: None,
+            player: None,
+            options_open: false,
+            action_notice: None,
+            copy_busy: false,
         }
     }
 
+    fn open_item(&mut self, path: PathBuf, cx: &mut Context<Self>) {
+        self.player = None;
+        if path
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("mp4"))
+        {
+            self.player =
+                Some(cx.new(|cx| super::video_player::VideoPlayer::new(path.clone(), cx)));
+        }
+        self.selected = Some(path);
+        self.options_open = false;
+        self.action_notice = None;
+        cx.notify();
+    }
+
     fn back(&mut self, cx: &mut Context<Self>) {
+        if self.options_open {
+            self.options_open = false;
+            cx.notify();
+            return;
+        }
+        self.player = None;
+        self.action_notice = None;
         if self.selected.take().is_none() {
             cx.emit(GalleryDismissed);
         }
@@ -59,7 +91,7 @@ impl Render for Gallery {
             .size_full()
             .flex()
             .flex_col()
-            .bg(theme.to_gpui(1.))
+            .bg(theme.to_gpui(cx.global::<SessionSettings>().background_opacity))
             .text_color(ink)
             .track_focus(&self.focus)
             .on_key_down(cx.listener(|gallery, event: &gpui::KeyDownEvent, _, cx| {
@@ -101,8 +133,19 @@ impl Render for Gallery {
                             .on_click(cx.listener(|gallery, _, _, cx| gallery.back(cx)))
                             .child(svg().path(icons::ARROW_LEFT).size(px(18.)).text_color(ink)),
                     )
-                    .child(div().text_sm().truncate().child(title)),
+                    .child(div().flex_1().min_w_0().text_sm().truncate().child(title))
+                    .child(self.actions(cx)),
             )
+            .when_some(self.action_notice.clone(), |view, notice| {
+                view.child(
+                    div()
+                        .px(px(24.))
+                        .pb(px(8.))
+                        .text_xs()
+                        .text_color(ink.opacity(0.7))
+                        .child(notice),
+                )
+            })
             .child(self.content(window, cx))
     }
 }

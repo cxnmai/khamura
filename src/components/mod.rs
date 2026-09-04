@@ -13,3 +13,5 @@ mod theme_palette;
 pub mod toolbar;
 
 mod gallery;
+
+mod video_player;

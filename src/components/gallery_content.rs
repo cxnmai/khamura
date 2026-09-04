@@ -14,14 +14,21 @@ impl Gallery {
                 index.saturating_sub(1)
             };
             if let Some(item) = items.get(next) {
-                self.selected = Some(item.path.clone());
-                cx.notify();
+                let path = item.path.clone();
+                self.open_item(path, cx);
             }
         }
     }
 
     pub(super) fn content(&self, window: &Window, cx: &Context<Self>) -> AnyElement {
         let ink = super::super::settings::foreground(cx.global::<SessionSettings>().theme_color);
+        if let Some(player) = &self.player {
+            return div()
+                .flex_1()
+                .min_h_0()
+                .child(player.clone())
+                .into_any_element();
+        }
         if let Some(path) = &self.selected {
             return div()
                 .flex_1()
@@ -48,11 +55,11 @@ impl Gallery {
         let store = cx.global::<GalleryStore>();
         if store.items.is_empty() {
             let message = if store.loading {
-                "Loading photos…"
+                "Loading captures…"
             } else if let Some(error) = &store.error {
                 error
             } else {
-                "Your photos will appear here"
+                "Your photos and videos will appear here"
             };
             return div()
                 .flex_1()
@@ -94,12 +101,12 @@ impl Gallery {
                         .on_key_down(cx.listener(
                             move |gallery, event: &gpui::KeyDownEvent, _, cx| {
                                 if matches!(event.keystroke.key.as_str(), "enter" | "space") {
-                                    gallery.selected = Some(keyboard_path.clone());
-                                    cx.notify();
+                                    gallery.open_item(keyboard_path.clone(), cx);
                                     cx.stop_propagation();
                                 }
                             },
                         ))
+                        .relative()
                         .size(px(edge))
                         .rounded(px(6.))
                         .overflow_hidden()
@@ -107,11 +114,30 @@ impl Gallery {
                         .cursor_pointer()
                         .hover(|style| style.opacity(0.8))
                         .on_click(cx.listener(move |gallery, _, _, cx| {
-                            gallery.selected = Some(path.clone());
-                            cx.notify();
+                            gallery.open_item(path.clone(), cx);
                         }))
                         .when_some(item.thumbnail.clone(), |view, thumbnail| {
                             view.child(img(thumbnail).size_full().object_fit(ObjectFit::Cover))
+                        })
+                        .when(item.is_video, |view| {
+                            view.child(
+                                div()
+                                    .absolute()
+                                    .bottom(px(8.))
+                                    .right(px(8.))
+                                    .size(px(24.))
+                                    .rounded_full()
+                                    .bg(gpui::black().opacity(0.5))
+                                    .flex()
+                                    .items_center()
+                                    .justify_center()
+                                    .child(
+                                        svg()
+                                            .path(icons::PLAY)
+                                            .size(px(12.))
+                                            .text_color(gpui::white()),
+                                    ),
+                            )
                         })
                 }),
             ))
