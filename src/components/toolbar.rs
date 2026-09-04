@@ -77,8 +77,20 @@ impl Render for Toolbar {
         let bar_color = CAMERA_LETTERBOX_COLOR.to_gpui(1.0);
         let well_color = darken_color(bar_color);
         let theme_icon = contrasting_icon_color(well_color);
-        let photo_circle = photo_active.then(|| gpui::white().opacity(0.65));
-        let video_circle = video_active.then(gpui::red);
+        let photo_circle = photo_selected.then(|| {
+            if photo_active {
+                gpui::white().opacity(0.65)
+            } else {
+                gpui::white()
+            }
+        });
+        let video_circle = video_selected.then(|| {
+            if video_active {
+                gpui::red()
+            } else {
+                gpui::red().opacity(0.65)
+            }
+        });
         let photo_icon = icon_color(photo_circle.unwrap_or(well_color), photo_selected);
         let video_icon = icon_color(video_circle.unwrap_or(well_color), video_selected);
 
