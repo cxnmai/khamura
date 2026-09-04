@@ -1,5 +1,5 @@
 use crate::{config::Config, theme::Rgb};
-use gpui::{App, AppContext};
+use gpui::{App, BorrowAppContext};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
