@@ -84,6 +84,7 @@ fn record(
     let mut frames_written = 0_u64;
     let mut stop_deadline = None;
     let mut last_progress = Instant::now();
+    let mut next_health_check = Instant::now();
     loop {
         if let Some(stop_time) = *stopped.lock().unwrap() {
             let target = (stop_time.saturating_duration_since(started).as_secs_f64()
@@ -96,17 +97,24 @@ fn record(
         let frame = latest.lock().unwrap().clone();
         let mut bytes = frame.as_raw().as_slice();
         while !bytes.is_empty() {
-            if stopped.lock().unwrap().is_some() && stop_deadline.is_none() {
-                stop_deadline = Some(Instant::now() + Duration::from_secs(30));
-            }
-            if stop_deadline.is_some_and(|deadline| Instant::now() > deadline) {
-                return Err(encoder.error("Encoder cannot keep up with this video quality; try a lower resolution or frame rate"));
-            }
-            if last_progress.elapsed() > Duration::from_secs(10) {
-                return Err(encoder.error("Video encoder stopped accepting frames"));
-            }
-            if let Some(status) = encoder.child.try_wait().map_err(|e| e.to_string())? {
-                return Err(encoder.error(&format!("Video encoder exited unexpectedly ({status})")));
+            // Health checks are bounded in time, not repeated for every partial
+            // pipe write (which previously caused thousands of locks/waitpid calls).
+            if Instant::now() >= next_health_check {
+                if stopped.lock().unwrap().is_some() && stop_deadline.is_none() {
+                    stop_deadline = Some(Instant::now() + Duration::from_secs(30));
+                }
+                if stop_deadline.is_some_and(|deadline| Instant::now() > deadline) {
+                    return Err(encoder.error("Encoder cannot keep up with this video quality; try a lower resolution or frame rate"));
+                }
+                if last_progress.elapsed() > Duration::from_secs(10) {
+                    return Err(encoder.error("Video encoder stopped accepting frames"));
+                }
+                if let Some(status) = encoder.child.try_wait().map_err(|e| e.to_string())? {
+                    return Err(
+                        encoder.error(&format!("Video encoder exited unexpectedly ({status})"))
+                    );
+                }
+                next_health_check = Instant::now() + Duration::from_millis(100);
             }
             match stdin.write(bytes) {
                 Ok(0) => return Err(encoder.error("Video encoder closed its input")),

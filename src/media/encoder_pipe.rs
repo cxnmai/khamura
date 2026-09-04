@@ -2,6 +2,9 @@
 use std::os::fd::RawFd;
 
 pub(super) fn make_nonblocking(fd: RawFd) -> Result<(), String> {
+    // Large BGRA frames otherwise cross a tiny pipe in hundreds of writes.
+    // Best effort: kernels/sandboxes that reject resizing retain their default.
+    unsafe { libc::fcntl(fd, libc::F_SETPIPE_SZ, 1024 * 1024) };
     // SAFETY: the caller retains the live pipe; fcntl does not transfer ownership.
     let flags = unsafe { libc::fcntl(fd, libc::F_GETFL) };
     if flags < 0 || unsafe { libc::fcntl(fd, libc::F_SETFL, flags | libc::O_NONBLOCK) } < 0 {
