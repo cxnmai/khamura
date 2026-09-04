@@ -1,0 +1,70 @@
+name: Publish release
+
+on:
+  push:
+    tags: ["v[0-9]*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_BUILD_JOBS: "2"
+  KHAMURA_VIDEO_ENCODER: software
+  TARGET: x86_64-unknown-linux-gnu
+
+jobs:
+  publish:
+    name: Linux x86-64 release
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          toolchain: stable
+          targets: ${{ env.TARGET }}
+      - name: Check release version
+        id: version
+        shell: bash
+        run: |
+          version=$(cargo metadata --locked --no-deps --format-version 1 | python3 -c 'import json,sys; print(json.load(sys.stdin)["packages"][0]["version"])')
+          if [[ "$GITHUB_REF_TYPE" != tag || "$GITHUB_REF_NAME" != "v$version" ]]; then
+            echo 'Run this workflow from a vVERSION tag matching Cargo.toml.' >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: ./.github/actions/setup-linux
+      - name: Build optimized binary
+        run: cargo build --locked --release --target "$TARGET"
+      - name: Check desktop installation without a camera or display
+        run: bash scripts/ci/smoke-desktop.sh "target/$TARGET/release/khamura"
+      - name: Package cargo-binstall archive
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: bash scripts/release/package.sh "$TARGET" "$VERSION"
+      - name: Publish GitHub release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" dist/* --verify-tag \
+              --title "Khamura $GITHUB_REF_NAME" --notes-file docs/release-notes.md
+          fi
+      - name: Publish crate when credentials are configured
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: bash scripts/release/publish-crate.sh "$VERSION"
