@@ -10,6 +10,7 @@ in pkgs.rustPlatform.buildRustPackage (dependencies.environment // {
 
   nativeBuildInputs = dependencies.nativeBuildInputs ++ [ pkgs.makeWrapper ];
   buildInputs = dependencies.runtimeLibraries;
+  nativeCheckInputs = [ pkgs.ffmpeg-full ];
   KHAMURA_VIDEO_ENCODER = "software";
 
   postInstall = ''
