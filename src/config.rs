@@ -40,11 +40,13 @@ impl Config {
         let (path, relocated) = crate::config_location::resolve(home)?;
         let text = match fs::read_to_string(&path) {
             Ok(text) => text,
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound && !relocated => String::new(),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound && !relocated => {
+                String::new()
+            }
             Err(error) => return Err(format!("{}: {error}", path.display())),
         };
-        let mut config = Self::parse(&text, home)
-            .map_err(|error| format!("{}: {error}", path.display()))?;
+        let mut config =
+            Self::parse(&text, home).map_err(|error| format!("{}: {error}", path.display()))?;
         config.path = path;
         Ok(config)
     }

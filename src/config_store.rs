@@ -85,7 +85,9 @@ pub(crate) fn save_output(path: &Path, home: &Path, output: &Path) -> Result<(),
         Err(error) => return Err(error.to_string()),
     };
     Config::parse(&original, home)?;
-    let mut document = original.parse::<DocumentMut>().map_err(|error| error.to_string())?;
+    let mut document = original
+        .parse::<DocumentMut>()
+        .map_err(|error| error.to_string())?;
     let output = output.to_str().ok_or("output path must be valid UTF-8")?;
     set(&mut document, "photo_directory", Value::from(output));
     write_atomic(path, &document.to_string())
