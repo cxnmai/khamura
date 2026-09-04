@@ -87,8 +87,19 @@ impl Gallery {
             .child(div().flex().flex_wrap().gap(px(8.)).children(
                 store.items.iter().enumerate().map(|(index, item)| {
                     let path = item.path.clone();
+                    let keyboard_path = path.clone();
                     div()
                         .id(("gallery-photo", index))
+                        .tab_index(0)
+                        .on_key_down(cx.listener(
+                            move |gallery, event: &gpui::KeyDownEvent, _, cx| {
+                                if matches!(event.keystroke.key.as_str(), "enter" | "space") {
+                                    gallery.selected = Some(keyboard_path.clone());
+                                    cx.notify();
+                                    cx.stop_propagation();
+                                }
+                            },
+                        ))
                         .size(px(edge))
                         .rounded(px(6.))
                         .overflow_hidden()
