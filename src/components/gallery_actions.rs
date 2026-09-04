@@ -23,6 +23,7 @@ impl Gallery {
         if let Some(path) = &self.selected {
             if path
                 .extension()
+                .and_then(|ext| ext.to_str())
                 .is_some_and(|ext| ext.eq_ignore_ascii_case("png"))
             {
                 items.push((
