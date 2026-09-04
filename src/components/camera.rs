@@ -1,6 +1,7 @@
 mod actions;
 mod error_popup;
 mod overlays;
+mod recording;
 mod stream;
 mod view;
 
@@ -32,6 +33,7 @@ enum Activity {
     Idle,
     Countdown(Instant),
     SavingPhoto,
+    StartingVideo,
     Recording(Instant),
     Finalizing,
 }

@@ -46,6 +46,7 @@ impl Camera {
     pub(super) fn overlays(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let recording = match self.activity {
             Activity::Recording(start) => Some(elapsed_label(start.elapsed())),
+            Activity::StartingVideo => Some("Starting video…".into()),
             Activity::Finalizing => Some("Saving video…".into()),
             _ => None,
         };

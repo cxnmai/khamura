@@ -61,43 +61,6 @@ impl Camera {
         }));
     }
 
-    fn start_recording(&mut self, cx: &mut Context<Self>) {
-        let Some(source) = self.source_frame.clone() else {
-            return;
-        };
-        let prefs = cx.global::<CaptureSettings>();
-        let microphone = prefs.microphone_on.then(|| {
-            prefs
-                .microphone_device
-                .clone()
-                .unwrap_or_else(|| "default".into())
-        });
-        let result = crate::media::Recorder::start(
-            &cx.global::<Config>().photo_directory,
-            source,
-            cx.global::<SessionSettings>().mirror,
-            microphone,
-            self.fps,
-        );
-        match result {
-            Ok((recorder, completion)) => {
-                self.recorder = Some(recorder);
-                self.set_activity(Activity::Recording(Instant::now()), cx);
-                self.media_task = Some(cx.spawn(async move |this, cx| {
-                    let result = completion
-                        .recv()
-                        .await
-                        .unwrap_or_else(|_| Err("Recording worker disconnected".into()));
-                    let _ = this.update(cx, |camera, cx| camera.finish_media(result, cx));
-                }));
-            }
-            Err(error) => {
-                self.error = Some(error);
-                cx.notify();
-            }
-        }
-    }
-
     pub(super) fn stop_or_cancel(&mut self, cx: &mut Context<Self>) {
         match self.activity {
             Activity::Countdown(_) => self.set_activity(Activity::Idle, cx),
@@ -111,7 +74,7 @@ impl Camera {
         }
     }
 
-    fn finish_media(&mut self, result: Result<PathBuf, String>, cx: &mut Context<Self>) {
+    pub(super) fn finish_media(&mut self, result: Result<PathBuf, String>, cx: &mut Context<Self>) {
         self.recorder = None;
         self.set_activity(Activity::Idle, cx);
         match result {
