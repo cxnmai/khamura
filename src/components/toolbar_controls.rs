@@ -83,32 +83,102 @@ impl Render for ToolbarControls {
             .into_any_element()
         };
         let (menu, label, tooltip) = if photo {
-            (Menu::Aspect, aspect_label(settings.aspect).to_string(), "Photo aspect ratio (capture crop)".into())
+            (
+                Menu::Aspect,
+                aspect_label(settings.aspect).to_string(),
+                "Photo aspect ratio (capture crop)".into(),
+            )
         } else {
-            (Menu::Quality, settings.quality.map(|q| format!("{}p", q.height)).unwrap_or("Native".into()), format!("Video quality: {}", quality_label(settings.quality)))
+            (
+                Menu::Quality,
+                settings
+                    .quality
+                    .map(|q| format!("{}p", q.height))
+                    .unwrap_or("Native".into()),
+                format!("Video quality: {}", quality_label(settings.quality)),
+            )
         };
-        let second = button("capture-format", label, tooltip, busy, false, color, cx.listener(move |this, _, window, cx| this.toggle(menu, window, cx)));
-        let grid = button("grid", "".into(), "Rule-of-thirds grid (not saved in captures)".into(), busy, settings.grid, color, |_, _, cx| {
-            if !cx.global::<CaptureSettings>().busy { CaptureSettings::change(cx, |s| s.grid = !s.grid); }
-        });
+        let second = button(
+            "capture-format",
+            label,
+            tooltip,
+            busy,
+            false,
+            color,
+            cx.listener(move |this, _, window, cx| this.toggle(menu, window, cx)),
+        );
+        let grid = button(
+            "grid",
+            "".into(),
+            "Rule-of-thirds grid (not saved in captures)".into(),
+            busy,
+            settings.grid,
+            color,
+            |_, _, cx| {
+                if !cx.global::<CaptureSettings>().busy {
+                    CaptureSettings::change(cx, |s| s.grid = !s.grid);
+                }
+            },
+        );
         let items = self.menu.map(|menu| choices(menu, settings));
-        div().relative().track_focus(&self.focus).flex().items_center().gap(px(2.))
+        div()
+            .relative()
+            .track_focus(&self.focus)
+            .flex()
+            .items_center()
+            .gap(px(2.))
             .on_key_down(cx.listener(|this, event: &gpui::KeyDownEvent, _, cx| {
-                if event.keystroke.key == "escape" && this.menu.take().is_some() { cx.stop_propagation(); cx.notify(); }
+                if event.keystroke.key == "escape" && this.menu.take().is_some() {
+                    cx.stop_propagation();
+                    cx.notify();
+                }
             }))
-            .child(first).child(second).child(grid)
-            .when_some(items, |view, items| view.child(
-                div().id("capture-options").absolute().bottom(px(52.)).left_0().w(px(220.)).max_h(px(280.)).overflow_y_scroll()
-                    .occlude().rounded(px(12.)).p(px(6.)).bg(theme.to_gpui(1.)).text_color(color).border_1().border_color(color.opacity(0.15))
-                    .on_mouse_down_out(cx.listener(|this, _, _, cx| { this.menu = None; cx.notify(); }))
-                    .children(items.into_iter().enumerate().map(|(index, (label, choice, selected))| {
-                        div().id(("capture-choice", index)).px(px(10.)).py(px(7.)).rounded(px(6.)).text_xs().cursor_pointer()
-                            .when(selected, |row| row.bg(color.opacity(0.14))).hover(|row| row.bg(color.opacity(0.1)))
-                            .on_click(cx.listener(move |this, _, _, cx| {
-                                if !cx.global::<CaptureSettings>().busy { CaptureSettings::change(cx, |s| choice.apply(s)); }
-                                this.menu = None; cx.notify();
-                            })).child(label)
-                    }))
-            ))
+            .child(first)
+            .child(second)
+            .child(grid)
+            .when_some(items, |view, items| {
+                view.child(
+                    div()
+                        .id("capture-options")
+                        .absolute()
+                        .bottom(px(52.))
+                        .left_0()
+                        .w(px(220.))
+                        .max_h(px(280.))
+                        .overflow_y_scroll()
+                        .occlude()
+                        .rounded(px(12.))
+                        .p(px(6.))
+                        .bg(theme.to_gpui(1.))
+                        .text_color(color)
+                        .border_1()
+                        .border_color(color.opacity(0.15))
+                        .on_mouse_down_out(cx.listener(|this, _, _, cx| {
+                            this.menu = None;
+                            cx.notify();
+                        }))
+                        .children(items.into_iter().enumerate().map(
+                            |(index, (label, choice, selected))| {
+                                div()
+                                    .id(("capture-choice", index))
+                                    .px(px(10.))
+                                    .py(px(7.))
+                                    .rounded(px(6.))
+                                    .text_xs()
+                                    .cursor_pointer()
+                                    .when(selected, |row| row.bg(color.opacity(0.14)))
+                                    .hover(|row| row.bg(color.opacity(0.1)))
+                                    .on_click(cx.listener(move |this, _, _, cx| {
+                                        if !cx.global::<CaptureSettings>().busy {
+                                            CaptureSettings::change(cx, |s| choice.apply(s));
+                                        }
+                                        this.menu = None;
+                                        cx.notify();
+                                    }))
+                                    .child(label)
+                            },
+                        )),
+                )
+            })
     }
 }
