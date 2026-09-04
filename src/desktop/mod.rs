@@ -16,6 +16,11 @@ pub fn install() -> Result<(), String> {
     )?;
     let executable =
         env::current_exe().map_err(|error| format!("Cannot locate Khamura: {error}"))?;
+    if !executable.is_file() {
+        return Err(
+            "Khamura's executable was moved or removed; run the installed binary again".into(),
+        );
+    }
     let (launcher, icon) = install_at(&data, &executable)?;
     println!(
         "Installed launcher: {}\nInstalled icon: {}",

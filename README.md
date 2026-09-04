@@ -14,6 +14,18 @@ Includes camera and microphone selection, capture timers, mirroring, and themes.
 - A Vulkan-capable graphics driver. VAAPI encoding is optional; recording falls
   back to software when hardware encoding is unavailable.
 
+Once the crate and matching release binaries are published, install with:
+
+```sh
+cargo binstall khamura
+khamura --install-desktop
+```
+
+Desktop installation embeds the icon and registers the current binary in your
+application menu, without opening the camera. It uses `$XDG_DATA_HOME` (default
+`~/.local/share`); re-run it if you move the binary. System dependencies still
+need to be installed separately. See [release packaging](docs/releases.md).
+
 ## Configuration
 
 Settings save automatically to `~/.config/khamura/config.toml`. No config file is
@@ -73,6 +85,7 @@ nix develop
 cargo run             # Debug build and run
 cargo test            # Run tests
 cargo build --release # Optimized binary: target/release/khamura
+target/release/khamura --install-desktop # Optional local desktop integration
 ```
 
 Use `cargo run --release` when evaluating camera or video performance.
