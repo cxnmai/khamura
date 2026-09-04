@@ -1,76 +1,74 @@
-# Binary releases
+# Publishing releases
 
-Khamura's Cargo metadata points `cargo-binstall` at GitHub release assets.
-This configures discovery; it does not build, upload, or publish anything.
-The regular installation flow requires a published `khamura` crate with this
-metadata and a matching release asset for the user's Linux target:
+`.github/workflows/release.yml` publishes Linux x86-64 binaries when a `vVERSION`
+tag is pushed. It does **not** run on pull requests or ordinary branch pushes.
+The tag must match `Cargo.toml`, for example `v0.1.0`.
+
+The workflow builds on Ubuntu 22.04, checks headless desktop installation, creates
+the archive and checksum, and attaches them to a GitHub release. It then publishes
+the crate if the `CARGO_REGISTRY_TOKEN` Actions secret is configured. Nothing
+requires a camera or microphone on the build runner.
+
+## One-time setup
+
+1. Sign in to crates.io and create a publishing API token authorized for `khamura`.
+   For the first publication, it must permit creating the new crate.
+2. Add it as the repository's **Actions secret** `CARGO_REGISTRY_TOKEN`:
+   <https://github.com/cxnmai/khamura/settings/secrets/actions>.
+   Never commit the token or paste it into an issue or chat.
+3. Ensure GitHub Actions is enabled and the version/name/license are correct.
+   Crates.io versions are immutable; review before publishing.
+
+Without the secret, the GitHub release still completes and the workflow prints a
+warning. Add the secret and re-run the release workflow **from the same tag** to
+publish the crate. Already-published crate versions are skipped on retries.
+
+## Release
 
 ```sh
-cargo binstall khamura
+# Update Cargo.toml and Cargo.lock when changing the version, then commit.
+git push origin main
+git tag -a v0.1.0 -m 'Khamura 0.1.0'
+git push origin v0.1.0
+```
+
+Monitor the **Publish release** workflow in GitHub Actions. It can also be
+manually dispatched from a version tag for retries. GitHub release uploads are
+idempotent; a retry replaces that tag's existing archive/checksum.
+
+## Archive and compatibility
+
+For `v0.1.0`, cargo-binstall metadata expects:
+
+```text
+khamura-x86_64-unknown-linux-gnu-v0.1.0.tar.gz
+└── khamura-x86_64-unknown-linux-gnu-v0.1.0/
+    ├── khamura
+    └── LICENSE
+```
+
+The icon is embedded, so no source checkout is needed for desktop installation.
+`scripts/release/package.sh` rejects binaries linked to Nix paths or missing
+shared libraries. Release binaries require glibc 2.35+ and the runtime dependencies
+listed in the README. Other architectures are not currently built by this workflow.
+NixOS users need an appropriate compatibility environment or a Nix source build.
+
+## Verify installation
+
+After crates.io publication:
+
+```sh
+cargo binstall khamura --version 0.1.0 --strategies crate-meta-data
+khamura --version
 khamura --install-desktop
 ```
 
-The second command installs the current executable's desktop launcher and icon
-for the current user. Run it again after moving the installed executable.
-
-## Archive contract
-
-For version `0.1.0` on `x86_64-unknown-linux-gnu`, use release tag `v0.1.0`
-and asset name `khamura-x86_64-unknown-linux-gnu-v0.1.0.tar.gz` containing:
-
-```text
-khamura-x86_64-unknown-linux-gnu-v0.1.0/
-  khamura                 # Executable, with its executable permission preserved
-  LICENSE
-```
-
-The SVG is embedded in the executable, so desktop installation does not need
-files from the source checkout. Repeat this naming/layout for every tested target.
-The URL and binary-path templates follow the
-[official cargo-binstall metadata format](https://github.com/cargo-bins/cargo-binstall/blob/main/SUPPORT.md).
-
-## Building a release
-
-Build in a conventional Linux environment with the native development packages
-listed in the README. A binary built in the Nix development shell is **not a
-portable Linux release**: it can reference the Nix dynamic linker and libraries.
-Use an appropriate older glibc baseline for the distributions you intend to
-support, and test the result on those distributions before advertising support.
-
-For a native x86-64 Linux build, from the repository root:
+Before the first crate publication, the release archive can be installed using
+this checkout's metadata:
 
 ```sh
-version=0.1.0 # Must match Cargo.toml
-target=x86_64-unknown-linux-gnu
-name="khamura-$target-v$version"
-cargo build --locked --release --target "$target"
-stage=$(mktemp -d)
-mkdir "$stage/$name"
-install -m755 "target/$target/release/khamura" "$stage/$name/khamura"
-install -m644 LICENSE "$stage/$name/LICENSE"
-tar -C "$stage" -czf "$name.tar.gz" "$name"
+cargo binstall --manifest-path . khamura --strategies crate-meta-data
 ```
 
-Inspect the binary's dependencies with `ldd`, then test capture, gallery playback,
-and desktop installation on a clean target system. Users still need the README's
-runtime dependencies: FFmpeg tools, `pactl`, audio services, graphics drivers,
-and the native shared libraries linked by the executable. Cargo-binstall does
-not install system packages.
-
-## Publishing checklist
-
-1. Update the crate version and review `cargo package --list`. Confirm the icon,
-   source files, and existing license are included.
-2. Run tests and `cargo publish --dry-run` in the release build environment.
-3. Build and test the archives. Publish a GitHub release at the matching `v…`
-   tag and upload its target archives. Make the corresponding source available
-   and review the existing license's distribution requirements.
-4. Publish the crate to crates.io once the assets are available. Publishing is
-   permanent; verify the package name and account ownership first.
-5. Test `cargo binstall khamura --version 0.1.0 --strategies crate-meta-data`
-   on a clean machine, then `khamura --install-desktop`. Restricting strategies
-   here verifies the release asset instead of silently testing a source fallback.
-
-Before publishing the crate, uploaded assets can be checked against the local
-manifest with `cargo binstall --manifest-path . khamura --strategies crate-meta-data`.
-No releases or crates are published automatically by this repository.
+See the [official cargo-binstall metadata documentation](https://github.com/cargo-bins/cargo-binstall/blob/main/SUPPORT.md)
+for archive discovery rules. No OS dependencies are installed by cargo-binstall.
