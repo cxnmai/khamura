@@ -4,6 +4,7 @@ mod mirror_control;
 mod opacity_slider;
 mod path_label;
 mod path_settings;
+mod preview_frame;
 mod save_status;
 pub mod settings;
 mod theme_palette;
