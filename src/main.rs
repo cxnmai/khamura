@@ -4,6 +4,7 @@ mod config;
 mod config_location;
 mod config_store;
 mod device_catalog;
+mod gallery;
 mod icons;
 mod media;
 mod runtime_tools;
@@ -24,6 +25,7 @@ fn main() {
             cx.set_global(session_settings::SessionSettings::from(&config));
             cx.set_global(capture_settings::CaptureSettings::from(&config));
             cx.set_global(config);
+            gallery::GalleryStore::init(cx);
             cx.open_window(
                 WindowOptions {
                     window_background: WindowBackgroundAppearance::Transparent,

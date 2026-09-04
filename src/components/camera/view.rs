@@ -2,6 +2,9 @@ use super::*;
 
 impl Render for Camera {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        if let Some(gallery) = &self.gallery {
+            return gallery.clone().into_any_element();
+        }
         if self.focus_pending {
             self.focus_pending = false;
             if self.settings_open {
@@ -83,6 +86,7 @@ impl Render for Camera {
             })
             .child(self.toolbar.clone())
             .child(self.overlays(cx))
+            .into_any_element()
     }
 }
 

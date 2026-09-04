@@ -79,6 +79,7 @@ impl Camera {
         self.set_activity(Activity::Idle, cx);
         match result {
             Ok(path) => {
+                crate::gallery::GalleryStore::refresh(cx);
                 self.notice = Some((
                     format!(
                         "Saved {}",

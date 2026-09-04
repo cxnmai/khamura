@@ -9,7 +9,7 @@ use super::{
     camera_capture::{CaptureMessage, CaptureRequest, capture_frames},
     preview_frame::render_image,
     settings::{Settings, SettingsDismissed},
-    toolbar::{CaptureRequested, SettingsToggled, Toolbar},
+    toolbar::{CaptureRequested, GalleryRequested, SettingsToggled, Toolbar},
 };
 use crate::{
     capture_settings::{CameraMode, CaptureSettings, PhotoAspect},
@@ -44,6 +44,7 @@ pub struct Camera {
     rendered_mirror: bool,
     status: String,
     settings: Entity<Settings>,
+    gallery: Option<Entity<super::gallery::Gallery>>,
     settings_open: bool,
     focus_pending: bool,
     previous_focus: Option<FocusHandle>,
@@ -101,6 +102,27 @@ impl Camera {
         let capture_subscription = cx.subscribe(&toolbar, |camera, _, _: &CaptureRequested, cx| {
             camera.capture(cx)
         });
+        cx.subscribe(&toolbar, |camera, _, _: &GalleryRequested, cx| {
+            if !matches!(camera.activity, Activity::Idle) {
+                return;
+            }
+            camera.set_settings_open(false, cx);
+            crate::gallery::GalleryStore::refresh(cx);
+            let gallery = cx.new(super::gallery::Gallery::new);
+            cx.subscribe(
+                &gallery,
+                |camera, _, _: &super::gallery::GalleryDismissed, cx| {
+                    camera.gallery = None;
+                    camera.previous_focus = None;
+                    camera.focus_pending = true;
+                    cx.notify();
+                },
+            )
+            .detach();
+            camera.gallery = Some(gallery);
+            cx.notify();
+        })
+        .detach();
         cx.observe_global::<CaptureSettings>(|camera, cx| camera.preferences_changed(cx))
             .detach();
         cx.observe_global::<SessionSettings>(|camera, cx| {
@@ -118,6 +140,7 @@ impl Camera {
             rendered_mirror: cx.global::<SessionSettings>().mirror,
             status: "Starting camera…".into(),
             settings,
+            gallery: None,
             settings_open: false,
             focus_pending: false,
             previous_focus: None,

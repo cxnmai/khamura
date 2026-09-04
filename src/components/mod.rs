@@ -11,3 +11,5 @@ mod save_status;
 pub mod settings;
 mod theme_palette;
 pub mod toolbar;
+
+mod gallery;

@@ -31,7 +31,9 @@ impl SessionSettings {
 
     pub fn set_output_path(cx: &mut App, path: &Path) -> Result<(), String> {
         Self::save_before_path_change(cx)?;
-        cx.update_global::<Config, _>(|config, _| config.set_output_path(path))
+        cx.update_global::<Config, _>(|config, _| config.set_output_path(path))?;
+        crate::gallery::GalleryStore::refresh(cx);
+        Ok(())
     }
 
     fn save_before_path_change(cx: &mut App) -> Result<(), String> {
