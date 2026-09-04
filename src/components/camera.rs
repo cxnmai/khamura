@@ -2,7 +2,7 @@ use super::{
     camera_capture::{CapturedFrame, capture_frames},
     toolbar::{FitModeChanged, Toolbar},
 };
-use crate::theme::{CAMERA_LETTERBOX_COLOR, CAMERA_LETTERBOX_OPACITY};
+use crate::config::Config;
 use async_channel::Receiver;
 use gpui::{
     Context, Entity, IntoElement, ObjectFit, Render, RenderImage, Size, Subscription, Task,
@@ -119,7 +119,8 @@ impl Camera {
 }
 
 impl Render for Camera {
-    fn render(&mut self, window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let config = cx.global::<Config>();
         if let Some(frame) = self.frame.clone() {
             let image = match self.fit {
                 CameraFit::Contain => {
@@ -141,7 +142,7 @@ impl Render for Camera {
                 .items_center()
                 .justify_center()
                 // The image is opaque; only the letterbox area uses this alpha.
-                .bg(CAMERA_LETTERBOX_COLOR.to_gpui(CAMERA_LETTERBOX_OPACITY))
+                .bg(config.theme_color.to_gpui(config.background_opacity))
                 .child(image)
                 .child(self.toolbar.clone())
         } else {

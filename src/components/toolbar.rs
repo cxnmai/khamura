@@ -1,6 +1,6 @@
 use crate::{
     icons::{APERTURE, CIRCLE_STOP, MAXIMIZE_2, VIDEO},
-    theme::CAMERA_LETTERBOX_COLOR,
+    config::Config,
 };
 use gpui::{
     App, ClickEvent, Context, EventEmitter, IntoElement, Render, Window, div, prelude::*, px, svg,
@@ -75,7 +75,7 @@ impl Render for Toolbar {
         let video_selected = self.selected_mode == CameraMode::Video;
         let video_active = video_selected && self.active;
 
-        let bar_color = CAMERA_LETTERBOX_COLOR.to_gpui(1.0);
+        let bar_color = cx.global::<Config>().theme_color.to_gpui(1.0);
         let well_color = darken_color(bar_color);
         let theme_icon = contrasting_icon_color(well_color);
         let photo_circle = photo_selected.then(|| {
