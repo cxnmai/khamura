@@ -9,6 +9,7 @@ use std::{
 pub enum Tool {
     Pactl,
     Ffmpeg,
+    Ffplay,
 }
 
 impl Tool {
@@ -16,18 +17,21 @@ impl Tool {
         match self {
             Self::Pactl => "pactl",
             Self::Ffmpeg => "ffmpeg",
+            Self::Ffplay => "ffplay",
         }
     }
     fn variable(self) -> &'static str {
         match self {
             Self::Pactl => "KHAMURA_PACTL",
             Self::Ffmpeg => "KHAMURA_FFMPEG",
+            Self::Ffplay => "KHAMURA_FFPLAY",
         }
     }
     fn built_path(self) -> Option<&'static str> {
         match self {
             Self::Pactl => option_env!("KHAMURA_PACTL"),
             Self::Ffmpeg => option_env!("KHAMURA_FFMPEG"),
+            Self::Ffplay => option_env!("KHAMURA_FFPLAY"),
         }
     }
 }

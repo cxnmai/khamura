@@ -17,6 +17,14 @@ pub const GRID: &str = "icons/grid.svg";
 pub const ARROW_LEFT: &str = "icons/arrow-left.svg";
 pub const IMAGE: &str = "icons/image.svg";
 
+pub const ELLIPSIS: &str = "icons/ellipsis.svg";
+
+pub const PLAY: &str = "icons/play.svg";
+
+pub const PAUSE: &str = "icons/pause.svg";
+
+pub const ROTATE_CCW: &str = "icons/rotate-ccw.svg";
+
 pub struct LucideAssets;
 
 impl AssetSource for LucideAssets {
@@ -34,6 +42,10 @@ impl AssetSource for LucideAssets {
             GRID => Some(include_bytes!("../assets/icons/grid.svg")),
             ARROW_LEFT => Some(include_bytes!("../assets/icons/arrow-left.svg")),
             IMAGE => Some(include_bytes!("../assets/icons/image.svg")),
+            ELLIPSIS => Some(include_bytes!("../assets/icons/ellipsis.svg")),
+            PLAY => Some(include_bytes!("../assets/icons/play.svg")),
+            PAUSE => Some(include_bytes!("../assets/icons/pause.svg")),
+            ROTATE_CCW => Some(include_bytes!("../assets/icons/rotate-ccw.svg")),
             _ => None,
         };
 
