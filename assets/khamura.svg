@@ -1,9 +1,60 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
   <title id="title">Khamura</title>
-  <desc id="desc">Six ivory aperture blades with one blue-gray accent, surrounding a dark hexagonal opening on a charcoal rounded tile.</desc>
-  <rect x="16" y="16" width="480" height="480" rx="108" fill="#242830"/>
-  <g transform="translate(256 256)" fill="#F4F0E8" stroke="#242830" stroke-width="7" stroke-linejoin="round">
-    <path d="M54 0 134.341-94.067A164 164 0 0 1 148.634 69.309L27 46.765Z" fill="#88A6B8"/>
+  <desc id="desc">An ivory six-blade aperture with a blue-gray accent and dark glass center, set inside a finely detailed lens ring on a charcoal tile.</desc>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#343C48"/>
+      <stop offset="0.55" stop-color="#252B34"/>
+      <stop offset="1" stop-color="#1B2027"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="0" y1="0" x2="0.7" y2="1">
+      <stop stop-color="#8593A6" stop-opacity="0.42"/>
+      <stop offset="0.5" stop-color="#8593A6" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#05090F" stop-opacity="0.55"/>
+    </linearGradient>
+    <linearGradient id="housing" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#1B222C"/>
+      <stop offset="1" stop-color="#303944"/>
+    </linearGradient>
+    <linearGradient id="ivory" gradientUnits="userSpaceOnUse" x1="55" y1="-90" x2="55" y2="75">
+      <stop stop-color="#FFFCF3"/>
+      <stop offset="0.6" stop-color="#F0EBDF"/>
+      <stop offset="1" stop-color="#CDC9C1"/>
+    </linearGradient>
+    <linearGradient id="accent" gradientUnits="userSpaceOnUse" x1="55" y1="-90" x2="100" y2="75">
+      <stop stop-color="#BAD9E4"/>
+      <stop offset="0.55" stop-color="#88A6B8"/>
+      <stop offset="1" stop-color="#607B90"/>
+    </linearGradient>
+    <radialGradient id="glass" cx="0.3" cy="0.2" r="0.9">
+      <stop stop-color="#395364"/>
+      <stop offset="0.5" stop-color="#1B2A37"/>
+      <stop offset="1" stop-color="#101720"/>
+    </radialGradient>
+  </defs>
+
+  <!-- A softly lit tile; no raster effects or blur filters. -->
+  <rect x="16" y="16" width="480" height="480" rx="108" fill="url(#tile)"/>
+  <rect x="17.5" y="17.5" width="477" height="477" rx="106.5" fill="none" stroke="url(#edge)" stroke-width="3"/>
+
+  <!-- Recessed lens barrel, with a thin machined rim and alignment marks. -->
+  <circle cx="256" cy="263" r="194" fill="#080D14" opacity="0.25"/>
+  <circle cx="256" cy="256" r="191" fill="url(#housing)" stroke="url(#edge)" stroke-width="3"/>
+  <circle cx="256" cy="256" r="181" fill="#171F28" stroke="#738597" stroke-opacity="0.17" stroke-width="2"/>
+  <path d="M104 150A185 185 0 0 1 275 72" fill="none" stroke="#B8C9D7" stroke-opacity="0.25" stroke-width="2" stroke-linecap="round"/>
+  <g stroke="#A7BACB" stroke-opacity="0.4" stroke-width="2" stroke-linecap="round">
+    <path d="M70 256H76M436 256H442M256 436V442"/>
+  </g>
+  <path d="M256 67V75" stroke="#A9CDDD" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- The glass remains visible only through the hexagonal aperture. -->
+  <circle cx="256" cy="256" r="65" fill="url(#glass)"/>
+  <path d="M229 239Q247 220 270 235" fill="none" stroke="#B1D3E5" stroke-opacity="0.24" stroke-width="3" stroke-linecap="round"/>
+  <path d="M246 278Q262 284 276 269" fill="none" stroke="#688FA6" stroke-opacity="0.2" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Broad blades preserve the original silhouette at small dock sizes. -->
+  <g transform="translate(256 256)" fill="url(#ivory)" stroke="#1B232D" stroke-width="7" stroke-linejoin="round">
+    <path d="M54 0 134.341-94.067A164 164 0 0 1 148.634 69.309L27 46.765Z" fill="url(#accent)"/>
     <path d="M54 0 134.341-94.067A164 164 0 0 1 148.634 69.309L27 46.765Z" transform="rotate(60)"/>
     <path d="M54 0 134.341-94.067A164 164 0 0 1 148.634 69.309L27 46.765Z" transform="rotate(120)"/>
     <path d="M54 0 134.341-94.067A164 164 0 0 1 148.634 69.309L27 46.765Z" transform="rotate(180)"/>
