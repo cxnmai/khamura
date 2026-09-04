@@ -1,6 +1,6 @@
 use std::io::Read;
 use std::path::Path;
-use std::process::{Child, Command, Stdio};
+use std::process::{Child, Stdio};
 use std::sync::{Arc, Mutex};
 
 pub(super) struct Encoder {
@@ -19,7 +19,7 @@ impl Encoder {
     ) -> Result<Self, String> {
         let microphone = microphone.map(super::microphone::resolve).transpose()?;
         let microphone = microphone.as_deref();
-        let mut command = Command::new("ffmpeg");
+        let mut command = crate::runtime_tools::command(crate::runtime_tools::Tool::Ffmpeg);
         command.args([
             "-hide_banner",
             "-loglevel",

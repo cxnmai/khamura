@@ -1,11 +1,12 @@
-mod components;
 mod capture_settings;
-mod device_catalog;
-mod media;
+mod components;
 mod config;
 mod config_location;
 mod config_store;
+mod device_catalog;
 mod icons;
+mod media;
+mod runtime_tools;
 mod session_settings;
 mod theme;
 

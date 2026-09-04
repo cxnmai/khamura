@@ -1,7 +1,6 @@
 //! Device discovery runs on the background executor, never on the render thread.
 use nokhwa::utils::{ApiBackend, CameraIndex};
 use serde::Deserialize;
-use std::process::Command;
 
 #[derive(Clone)]
 pub struct Device {
@@ -50,10 +49,14 @@ struct Source {
 }
 
 fn microphones() -> Result<Vec<Device>, String> {
-    let output = Command::new("pactl")
+    let output = crate::runtime_tools::command(crate::runtime_tools::Tool::Pactl)
         .args(["--format=json", "list", "sources"])
         .output()
-        .map_err(|error| format!("could not run pactl: {error}"))?;
+        .map_err(|error| {
+            format!(
+                "Microphone tools unavailable: {error}. Rebuild with nix develop, or install pactl."
+            )
+        })?;
     if !output.status.success() {
         return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
     }

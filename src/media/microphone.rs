@@ -1,7 +1,7 @@
 //! Resolve the chosen source explicitly: Pulse may silently fall back for unknown names.
 use serde_json::Value;
 use std::io::{Read, Seek};
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::time::{Duration, Instant};
 
 pub(super) fn resolve(requested: &str) -> Result<String, String> {
@@ -43,7 +43,7 @@ fn validate(json: &[u8], requested: &str) -> Result<(), String> {
 /// Capture output through a file so a full stdout pipe cannot deadlock the timeout.
 fn query(args: &[&str]) -> Result<Vec<u8>, String> {
     let mut output = tempfile::tempfile().map_err(|e| format!("Cannot query microphone: {e}"))?;
-    let mut child = Command::new("pactl")
+    let mut child = crate::runtime_tools::command(crate::runtime_tools::Tool::Pactl)
         .args(args)
         .stdin(Stdio::null())
         .stderr(Stdio::null())

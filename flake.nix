@@ -30,6 +30,9 @@
             ];
             buildInputs = runtimeLibraries;
 
+            # Embed helper paths at build time for launches outside this shell.
+            KHAMURA_PACTL = "${pkgs.lib.getExe' pkgs.pulseaudio "pactl"}";
+            KHAMURA_FFMPEG = "${pkgs.lib.getExe pkgs.ffmpeg-full}";
             LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
             BINDGEN_EXTRA_CLANG_ARGS = "-I${pkgs.linuxHeaders}/include -I${pkgs.stdenv.cc.libc_dev}/include";
             ZED_PATH_SAMPLE_COUNT = "0";
