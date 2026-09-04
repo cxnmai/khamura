@@ -7,7 +7,7 @@ The archive targets `x86_64-unknown-linux-gnu`, built on Ubuntu 22.04
 (glibc 2.35 or newer). It contains the executable and license; the desktop icon
 is embedded in the executable. SHA-256 checksums are provided alongside it.
 
-Once the matching version is published on crates.io:
+Install with cargo-binstall:
 
 ```sh
 cargo binstall khamura
