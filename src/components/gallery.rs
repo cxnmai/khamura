@@ -19,6 +19,8 @@ pub struct Gallery {
     action_notice: Option<String>,
     copy_busy: bool,
     filmstrip_scroll: gpui::ScrollHandle,
+    grid_scroll: gpui::UniformListScrollHandle,
+    photo_cache: gpui::Entity<gpui::RetainAllImageCache>,
 }
 
 impl Gallery {
@@ -36,6 +38,8 @@ impl Gallery {
             action_notice: None,
             copy_busy: false,
             filmstrip_scroll: gpui::ScrollHandle::new(),
+            grid_scroll: gpui::UniformListScrollHandle::new(),
+            photo_cache: gpui::RetainAllImageCache::new(cx),
         }
     }
 
@@ -52,6 +56,7 @@ impl Gallery {
             self.filmstrip_scroll.scroll_to_item(index);
         }
         self.player = None;
+        self.photo_cache = gpui::RetainAllImageCache::new(cx);
         if path
             .extension()
             .is_some_and(|ext| ext.eq_ignore_ascii_case("mp4"))
@@ -72,6 +77,7 @@ impl Gallery {
             return;
         }
         self.player = None;
+        self.photo_cache = gpui::RetainAllImageCache::new(cx);
         self.action_notice = None;
         if self.selected.take().is_none() {
             cx.emit(GalleryDismissed);
