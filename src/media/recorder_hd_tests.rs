@@ -12,15 +12,9 @@ fn full_hd_recording_stops_promptly_without_losing_duration() {
     // Full-size raw frames expose pipe backpressure that thumbnail tests miss.
     // Simple blocks keep encoding CPU costs modest and avoid accessing any device.
     let frame = Arc::new(RgbaImage::from_fn(1920, 1080, |x, y| {
-        image::Rgba([
-            ((x / 120) * 16) as u8,
-            ((y / 120) * 28) as u8,
-            128,
-            255,
-        ])
+        image::Rgba([((x / 120) * 16) as u8, ((y / 120) * 28) as u8, 128, 255])
     }));
-    let (recorder, completion) =
-        Recorder::start(output.path(), frame, false, None, 30).unwrap();
+    let (recorder, completion) = Recorder::start(output.path(), frame, false, None, 30).unwrap();
     std::thread::sleep(Duration::from_secs(2));
     recorder.stop();
     let deadline = Instant::now() + Duration::from_secs(8);
@@ -55,7 +49,10 @@ fn full_hd_recording_stops_promptly_without_losing_duration() {
     assert_eq!(stream["width"], 1920);
     assert_eq!(stream["height"], 1080);
     let duration: f64 = stream["duration"].as_str().unwrap().parse().unwrap();
-    assert!((1.9..2.5).contains(&duration), "Unexpected duration: {duration}");
+    assert!(
+        (1.9..2.5).contains(&duration),
+        "Unexpected duration: {duration}"
+    );
     // Decode the entire recording, not merely its container header or first frame.
     let decoded = Command::new("ffmpeg")
         .args(["-v", "error", "-xerror", "-i"])
