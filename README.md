@@ -1,10 +1,23 @@
 # Khamura
 
-A Linux desktop camera app built with Rust and GPUI.
+A minimal Linux camera app built with Rust and GPUI. Capture PNG photos and
+H.264 MP4 videos with optional AAC audio, then browse them in the built-in gallery.
+Includes camera and microphone selection, capture timers, mirroring, and themes.
+
+## Dependencies
+
+- A V4L2-compatible camera.
+- `ffmpeg` with H.264/AAC encoding and PulseAudio input support.
+- `ffprobe` and `ffplay` for gallery video playback.
+- `pactl` for microphone discovery; PulseAudio or PipeWire's PulseAudio service
+  for audio.
+- A Vulkan-capable graphics driver. VAAPI encoding is optional; recording falls
+  back to software when hardware encoding is unavailable.
 
 ## Configuration
 
-Optionally create `~/.config/khamura/config.toml`:
+Settings save automatically to `~/.config/khamura/config.toml`. No config file is
+required to start; missing settings use defaults. Restart after editing manually.
 
 ```toml
 photo_directory = "~/Pictures/khamura"
@@ -19,45 +32,51 @@ timer_seconds = 0
 aspect = "native"
 grid = false
 microphone_on = true
-# Omit these to use the default devices and native camera quality:
+
+# Optional: omit to use default devices and native camera quality.
 # camera_device = "/dev/video0"
 # microphone_device = "alsa_input.example"
 # quality = { width = 1920, height = 1080, fps = 30 }
 ```
 
-All settings are optional; the example shows the defaults. Settings are loaded
-at startup, so restart the app after editing. Invalid settings are reported on
-stderr and prevent startup.
+| Setting | Values |
+| --- | --- |
+| `photo_directory` | Photo/video output folder; absolute path or `~/…`. |
+| `theme_color` | Background color as `#RRGGBB`. |
+| `background_opacity` | `0.0`–`1.0`; preview background and gallery transparency. |
+| `preview_fit` | `"contain"` (Fit) or `"cover"` (Fill). |
+| `mirror` | Mirror the preview and saved captures. |
+| `capture.mode` | `"photo"` or `"video"`. |
+| `capture.timer_seconds` | `0`, `3`, or `10`. |
+| `capture.aspect` | `"native"`, `"four_three"`, `"sixteen_nine"`, or `"square"`. |
+| `capture.grid` | Show composition guides, without saving them in captures. |
+| `capture.microphone_on` | Include audio in recordings. |
+| `capture.camera_device` | Camera device path. |
+| `capture.microphone_device` | PulseAudio source name, not its display label. |
+| `capture.quality` | Camera-supported `width`, `height`, and `fps`. |
 
-- `photo_directory`: an absolute path or a path starting with `~/`. Other shell
-  expansions (such as `$HOME`) are not supported. Defaults to
-  `~/Pictures/khamura`. Both photos and videos save here. Loading config does not
-  create it; saving media does.
-- `theme_color`: RGB hex color (`#RRGGBB`), used for the toolbar and preview
-  letterbox background.
-- `background_opacity`: number from `0.0` (transparent) to `1.0` (opaque), applied
-  to the preview letterbox background. The toolbar stays opaque for readability;
-  the camera image is unaffected.
-- `preview_fit`: `"contain"` (Fit, the default) or `"cover"` (Fill).
-- `mirror`: boolean, defaults to `true`. Set to `false` for an unmirrored live
-  preview and saved media, or change it immediately with the settings toggle.
+The settings menu can change the config and output paths. Relocated config paths
+are remembered in `~/.config/khamura/config-path`; the default location uses
+`HOME`, not `XDG_CONFIG_HOME`.
 
-The optional `[capture]` table persists toolbar and device preferences:
-- `mode`: `"photo"` or `"video"`.
-- `timer_seconds`: `0`, `3`, or `10`.
-- `aspect`: `"native"`, `"four_three"`, `"sixteen_nine"`, or `"square"`.
-- `grid`: show composition guides (boolean).
-- `microphone_on`: include microphone audio in video (boolean, default `true`).
-- `camera_device`: camera device path; omit for the default camera.
-- `microphone_device`: PulseAudio source name, not its display label; omit for
-  the default source. The settings dropdown writes the correct name.
-- `quality`: a table with positive `width`, `height`, and `fps` values. Omit for
-  native quality; use the toolbar to select a format supported by the camera.
+Executable locations can be overridden with `KHAMURA_FFMPEG`, `KHAMURA_FFPROBE`,
+`KHAMURA_FFPLAY`, and `KHAMURA_PACTL`. Set `KHAMURA_VIDEO_ENCODER=software` to
+force software recording when troubleshooting graphics drivers.
 
-The default config path is relative to `HOME`; `XDG_CONFIG_HOME` is not used.
-After relocating the config, `~/.config/khamura/config-path` records its absolute
-location so the app can find it on restart. Keep that locator file in place;
-removing it makes the app use the default config location again.
-No configuration file is required at startup. Changing a setting creates it
-and its parent directory if needed. Saves preserve existing comments and
-`photo_directory`, and replace the file atomically rather than truncating it.
+## Development
+
+Install Rust and Cargo. The Nix development shell supplies the native build
+libraries and runtime tools:
+
+```sh
+nix develop
+cargo run             # Debug build and run
+cargo test            # Run tests
+cargo build --release # Optimized binary: target/release/khamura
+```
+
+Use `cargo run --release` when evaluating camera or video performance.
+Nix builds retain runtime tool paths so the binary can also launch outside the
+shell. Without Nix, install the dependencies above plus `pkg-config`, libclang,
+Linux headers, Fontconfig, FreeType, libxkbcommon, Vulkan, Wayland, and XCB
+libraries and development headers. Cargo manages the Rust dependencies.
