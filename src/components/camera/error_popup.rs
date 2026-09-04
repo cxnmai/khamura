@@ -4,6 +4,8 @@ impl Camera {
     pub(super) fn error_popup(&self, error: String, cx: &mut Context<Self>) -> impl IntoElement {
         div()
             .absolute()
+            .top_0()
+            .left_0()
             .size_full()
             .occlude()
             .bg(gpui::black().opacity(0.25))
@@ -16,6 +18,8 @@ impl Camera {
                     .occlude()
                     .w(px(340.))
                     .max_w_full()
+                    .max_h_full()
+                    .overflow_y_scroll()
                     .p(px(20.))
                     .rounded(px(16.))
                     .bg(gpui::rgb(0x252830))
@@ -37,6 +41,15 @@ impl Camera {
                                 camera.error = None;
                                 cx.notify();
                             }))
+                            .on_key_down(cx.listener(
+                                |camera, event: &gpui::KeyDownEvent, _, cx| {
+                                    if matches!(event.keystroke.key.as_str(), "enter" | "space") {
+                                        camera.error = None;
+                                        cx.notify();
+                                        cx.stop_propagation();
+                                    }
+                                },
+                            ))
                             .child("Dismiss · Esc"),
                     ),
             )

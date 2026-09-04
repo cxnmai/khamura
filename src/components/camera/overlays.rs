@@ -17,6 +17,8 @@ pub(super) fn elapsed_label(elapsed: Duration) -> String {
 pub(super) fn grid() -> impl IntoElement {
     div()
         .absolute()
+        .top_0()
+        .left_0()
         .size_full()
         .children([1., 2.].into_iter().flat_map(|third| {
             [
@@ -49,6 +51,8 @@ impl Camera {
         };
         div()
             .absolute()
+            .top_0()
+            .left_0()
             .size_full()
             .when_some(recording, |view, time| {
                 view.child(
