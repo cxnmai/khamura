@@ -84,6 +84,22 @@ impl Camera {
         cx.notify();
     }
 
+    pub(super) fn retry_camera(&mut self, cx: &mut Context<Self>) {
+        if !matches!(self.activity, Activity::Idle) {
+            return;
+        }
+        self.request.revision += 1;
+        self.error = None;
+        self.capture_ready = false;
+        self.source_frame = None;
+        if let Some(frame) = self.frame.take() {
+            cx.drop_image(frame, None);
+        }
+        self.status = "Opening camera…".into();
+        let _ = self.requests.try_send(self.request.clone());
+        cx.notify();
+    }
+
     pub(super) fn tick_task(cx: &mut Context<Self>) -> Task<()> {
         cx.spawn(async move |this, cx| loop {
             gpui::Timer::after(Duration::from_millis(100)).await;

@@ -15,7 +15,8 @@ needed. Mirror applies to both the live preview and saved photos/videos.
 The toolbar changes with the selected mode:
 - **Photo:** countdown timer (Off / 3s / 10s), aspect ratio (Native / 4:3 / 16:9 /
   Square), and a rule-of-thirds grid. The selected aspect ratio crops the saved
-  photo as well as its preview.
+  photo as well as its preview. Explicit photo ratios are fully visible even if
+  preview Fill is selected; Fill remains a preview-only crop for Native/video.
 - **Video:** microphone On/Off, camera-supported resolution/frame-rate presets,
   and the same grid. Grid lines are guides only; they never appear in saved media.
 

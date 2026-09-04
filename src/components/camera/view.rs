@@ -14,7 +14,13 @@ impl Render for Camera {
             }
         }
         let settings = cx.global::<SessionSettings>();
-        let fit = settings.fit;
+        let capture = cx.global::<CaptureSettings>();
+        // An explicit photo ratio describes the saved crop: never crop it a second time.
+        let fit = if capture.mode == CameraMode::Photo && capture.aspect != PhotoAspect::Native {
+            CameraFit::Contain
+        } else {
+            settings.fit
+        };
         let background = settings.theme_color.to_gpui(settings.background_opacity);
         let show_grid = cx.global::<CaptureSettings>().grid;
         div()

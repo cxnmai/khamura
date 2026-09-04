@@ -29,6 +29,35 @@ impl Camera {
                     .gap(px(12.))
                     .child("Could not complete action")
                     .child(div().text_sm().child(error))
+                    .when(
+                        !self.capture_ready && matches!(self.activity, Activity::Idle),
+                        |popup| {
+                            popup.child(
+                                div()
+                                    .id("retry-camera")
+                                    .tab_index(0)
+                                    .cursor_pointer()
+                                    .rounded(px(6.))
+                                    .p(px(8.))
+                                    .bg(gpui::white().opacity(0.12))
+                                    .on_click(
+                                        cx.listener(|camera, _, _, cx| camera.retry_camera(cx)),
+                                    )
+                                    .on_key_down(cx.listener(
+                                        |camera, event: &gpui::KeyDownEvent, _, cx| {
+                                            if matches!(
+                                                event.keystroke.key.as_str(),
+                                                "enter" | "space"
+                                            ) {
+                                                camera.retry_camera(cx);
+                                                cx.stop_propagation();
+                                            }
+                                        },
+                                    ))
+                                    .child("Retry camera"),
+                            )
+                        },
+                    )
                     .child(
                         div()
                             .id("dismiss-error")
