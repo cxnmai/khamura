@@ -10,52 +10,73 @@ impl Render for Camera {
             } else if let Some(focus) = self.previous_focus.take() {
                 focus.focus(window);
             } else {
-                window.blur();
+                self.root_focus.focus(window);
             }
         }
-        let config = cx.global::<SessionSettings>();
-        if let Some(frame) = self.frame.clone() {
-            let image = match config.fit {
-                CameraFit::Contain => {
-                    // Size the painted image explicitly so resizing the window always leaves
-                    // the unused area outside the image as letterbox space.
-                    let image_size = contain_size(window.viewport_size(), frame.size(0));
-                    img(frame)
+        let settings = cx.global::<SessionSettings>();
+        let fit = settings.fit;
+        let background = settings.theme_color.to_gpui(settings.background_opacity);
+        let show_grid = cx.global::<CaptureSettings>().grid;
+        div()
+            .size_full()
+            .relative()
+            .flex()
+            .items_center()
+            .justify_center()
+            .track_focus(&self.root_focus)
+            .on_key_down(cx.listener(|camera, event: &gpui::KeyDownEvent, _, cx| {
+                match event.keystroke.key.as_str() {
+                    "escape" => {
+                        if camera.error.take().is_none() {
+                            if camera.settings_open {
+                                camera.set_settings_open(false, cx);
+                            } else if matches!(camera.activity, Activity::Countdown(_)) {
+                                camera.stop_or_cancel(cx);
+                            }
+                        }
+                        cx.notify();
+                        cx.stop_propagation();
+                    }
+                    "space"
+                        if !event.is_held && !camera.settings_open && camera.error.is_none() =>
+                    {
+                        camera.capture(cx);
+                        cx.stop_propagation();
+                    }
+                    _ => {}
+                }
+            }))
+            .bg(background)
+            .when_some(self.frame.clone(), |view, frame| {
+                let image_size = match fit {
+                    CameraFit::Contain => contain_size(window.viewport_size(), frame.size(0)),
+                    CameraFit::Cover => window.viewport_size(),
+                };
+                view.child(
+                    div()
+                        .relative()
                         .w(image_size.width)
                         .h(image_size.height)
-                        .object_fit(ObjectFit::Fill)
-                }
-                CameraFit::Cover => img(frame).size_full().object_fit(ObjectFit::Cover),
-            };
-
-            div()
-                .size_full()
-                .relative()
-                .flex()
-                .items_center()
-                .justify_center()
-                // The image is opaque; only the letterbox area uses this alpha.
-                .bg(config.theme_color.to_gpui(config.background_opacity))
-                .child(image)
-                .when(self.settings_open, |view| {
-                    view.child(self.settings_overlay(cx))
-                })
-                .child(self.toolbar.clone())
-        } else {
-            div()
-                .size_full()
-                .relative()
-                .flex()
-                .items_center()
-                .justify_center()
-                .bg(gpui::black())
-                .text_color(gpui::white())
-                .child(self.status.clone())
-                .when(self.settings_open, |view| {
-                    view.child(self.settings_overlay(cx))
-                })
-                .child(self.toolbar.clone())
-        }
+                        .child(
+                            img(frame)
+                                .size_full()
+                                .object_fit(if fit == CameraFit::Contain {
+                                    ObjectFit::Fill
+                                } else {
+                                    ObjectFit::Cover
+                                }),
+                        )
+                        .when(show_grid, |image| image.child(overlays::grid())),
+                )
+            })
+            .when(self.frame.is_none(), |view| {
+                view.child(div().text_color(gpui::white()).child(self.status.clone()))
+            })
+            .when(self.settings_open, |view| {
+                view.child(self.settings_overlay(cx))
+            })
+            .child(self.toolbar.clone())
+            .child(self.overlays(cx))
     }
 }
 
@@ -65,11 +86,9 @@ fn contain_size(
 ) -> Size<gpui::Pixels> {
     let image_ratio = image.width.0 as f32 / image.height.0 as f32;
     let viewport_ratio = viewport.width / viewport.height;
-
     if viewport_ratio > image_ratio {
         size(viewport.height * image_ratio, viewport.height)
     } else {
         size(viewport.width, viewport.width / image_ratio)
     }
 }
-
