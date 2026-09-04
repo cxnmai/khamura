@@ -17,16 +17,17 @@ pub(super) struct ToolbarControls {
 impl ToolbarControls {
     pub fn new(cx: &mut Context<Self>) -> Self {
         cx.observe_global::<CaptureSettings>(|this, cx| {
-            if cx.global::<CaptureSettings>().busy {
-                this.menu = None;
-            }
-            cx.notify();
+            this.dismiss(cx);
         })
         .detach();
         Self {
             menu: None,
             focus: cx.focus_handle(),
         }
+    }
+    pub(super) fn dismiss(&mut self, cx: &mut Context<Self>) {
+        self.menu = None;
+        cx.notify();
     }
     fn toggle(&mut self, menu: Menu, window: &mut Window, cx: &mut Context<Self>) {
         if cx.global::<CaptureSettings>().busy {

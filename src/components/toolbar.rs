@@ -60,6 +60,10 @@ impl Toolbar {
 
     pub fn set_settings_open(&mut self, open: bool, cx: &mut Context<Self>) {
         self.settings_open = open;
+        if open {
+            self.controls
+                .update(cx, |controls, cx| controls.dismiss(cx));
+        }
         cx.notify();
     }
 
