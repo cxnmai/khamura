@@ -127,6 +127,9 @@ impl Camera {
 
     fn set_settings_open(&mut self, open: bool, cx: &mut Context<Self>) {
         if self.settings_open != open {
+            if !open {
+                SessionSettings::save(cx);
+            }
             self.settings_open = open;
             self.focus_pending = true;
             self.toolbar

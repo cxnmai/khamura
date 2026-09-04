@@ -7,7 +7,7 @@ use gpui::{
 
 use crate::session_settings::SessionSettings;
 
-/// A session-only opacity control. Dragging remains active beyond the track bounds.
+/// Preview while dragging; persist once the drag ends, even outside the track.
 pub struct OpacitySlider {
     bounds: Rc<Cell<Bounds<Pixels>>>,
     dragging: bool,
@@ -29,8 +29,16 @@ impl OpacitySlider {
         let value = ((x - bounds.origin.x) / bounds.size.width).clamp(0., 1.);
         cx.update_global::<SessionSettings, _>(|settings, _| {
             settings.background_opacity = value;
+            settings.dirty = true;
         });
         cx.notify();
+    }
+
+    fn finish_drag(&mut self, cx: &mut Context<Self>) {
+        if self.dragging {
+            self.dragging = false;
+            SessionSettings::save(cx);
+        }
     }
 }
 
@@ -59,14 +67,14 @@ impl Render for OpacitySlider {
             )
             .on_mouse_up(
                 MouseButton::Left,
-                cx.listener(|this, _, _, _| {
-                    this.dragging = false;
+                cx.listener(|this, _, _, cx| {
+                    this.finish_drag(cx);
                 }),
             )
             .on_mouse_up_out(
                 MouseButton::Left,
-                cx.listener(|this, _, _, _| {
-                    this.dragging = false;
+                cx.listener(|this, _, _, cx| {
+                    this.finish_drag(cx);
                 }),
             )
             .child(
@@ -88,7 +96,7 @@ impl Render for OpacitySlider {
                                                 if event.pressed_button == Some(MouseButton::Left) {
                                                     this.set_position(event.position.x, cx);
                                                 } else {
-                                                    this.dragging = false;
+                                                    this.finish_drag(cx);
                                                 }
                                             }
                                         });
