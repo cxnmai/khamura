@@ -4,8 +4,7 @@ use gpui::{IntoElement, div, prelude::*, px};
 pub(super) fn save_status(settings: &SessionSettings, ink: gpui::Hsla) -> impl IntoElement {
     let message = match &settings.save_error {
         Some(error) => format!("Could not save settings: {error}"),
-        None if settings.dirty => "Release slider to save changes".into(),
-        None => "Changes save automatically".into(),
+        None => String::new(),
     };
     div()
         .text_xs()

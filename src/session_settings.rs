@@ -1,6 +1,7 @@
 use crate::{config::Config, theme::Rgb};
 use gpui::{App, BorrowAppContext};
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -22,6 +23,24 @@ pub struct SessionSettings {
 impl gpui::Global for SessionSettings {}
 
 impl SessionSettings {
+    pub fn relocate_config(cx: &mut App, path: &Path) -> Result<(), String> {
+        Self::save_before_path_change(cx)?;
+        cx.update_global::<Config, _>(|config, _| config.relocate(path))
+    }
+
+    pub fn set_output_path(cx: &mut App, path: &Path) -> Result<(), String> {
+        Self::save_before_path_change(cx)?;
+        cx.update_global::<Config, _>(|config, _| config.set_output_path(path))
+    }
+
+    fn save_before_path_change(cx: &mut App) -> Result<(), String> {
+        Self::save(cx);
+        match &cx.global::<Self>().save_error {
+            Some(error) => Err(error.clone()),
+            None => Ok(()),
+        }
+    }
+
     pub fn change(cx: &mut App, update: impl FnOnce(&mut Self)) {
         cx.update_global::<Self, _>(|settings, _| {
             update(settings);

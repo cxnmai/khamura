@@ -1,6 +1,7 @@
 pub mod camera;
 mod camera_capture;
 mod opacity_slider;
+mod path_settings;
 mod save_status;
 pub mod settings;
 mod theme_palette;

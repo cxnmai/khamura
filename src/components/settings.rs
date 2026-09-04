@@ -1,4 +1,5 @@
 use super::opacity_slider::OpacitySlider;
+use super::path_settings::PathSettings;
 use crate::{
     session_settings::{CameraFit, SessionSettings},
     theme::Rgb,
@@ -11,6 +12,7 @@ pub struct SettingsDismissed;
 pub struct Settings {
     focus: FocusHandle,
     opacity: Entity<OpacitySlider>,
+    paths: Entity<PathSettings>,
 }
 impl Settings {
     pub fn new(cx: &mut Context<Self>) -> Self {
@@ -19,6 +21,7 @@ impl Settings {
         Self {
             focus: cx.focus_handle(),
             opacity: cx.new(OpacitySlider::new),
+            paths: cx.new(PathSettings::new),
         }
     }
 }
@@ -115,7 +118,10 @@ impl Render for Settings {
                     )
                     .child(self.opacity.clone()),
             )
-            .child(super::save_status::save_status(settings, foreground))
+            .child(self.paths.clone())
+            .when(settings.save_error.is_some(), |view| {
+                view.child(super::save_status::save_status(settings, foreground))
+            })
     }
 }
 pub(super) fn foreground(color: Rgb) -> gpui::Hsla {
