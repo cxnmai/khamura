@@ -29,6 +29,7 @@ fn main() {
             cx.open_window(
                 WindowOptions {
                     window_background: WindowBackgroundAppearance::Transparent,
+                    app_id: Some("khamura".into()),
                     ..Default::default()
                 },
                 |window, cx| cx.new(|cx| Camera::new(window, cx)),
