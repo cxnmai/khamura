@@ -1,3 +1,6 @@
+#[path = "encoder_settings.rs"]
+mod settings;
+
 use std::io::Read;
 use std::path::Path;
 use std::process::{Child, Stdio};
@@ -19,7 +22,9 @@ impl Encoder {
     ) -> Result<Self, String> {
         let microphone = microphone.map(super::microphone::resolve).transpose()?;
         let microphone = microphone.as_deref();
+        let device = settings::hardware(width, height);
         let mut command = crate::runtime_tools::command(crate::runtime_tools::Tool::Ffmpeg);
+        settings::input(&mut command, device.as_deref());
         command.args([
             "-hide_banner",
             "-loglevel",
@@ -40,16 +45,8 @@ impl Encoder {
         if let Some(device) = microphone {
             command.args(["-thread_queue_size", "512", "-f", "pulse", "-i", device]);
         }
-        command.args(["-map", "0:v:0", "-vf"]);
-        // H.264 yuv420p requires even dimensions. Pad rather than discard camera pixels.
-        command.arg(if mirror {
-            "hflip,pad=ceil(iw/2)*2:ceil(ih/2)*2"
-        } else {
-            "pad=ceil(iw/2)*2:ceil(ih/2)*2"
-        });
-        command.args([
-            "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
-        ]);
+        command.args(["-map", "0:v:0"]);
+        settings::output(&mut command, device.is_some(), mirror);
         if microphone.is_some() {
             command.args([
                 "-map",
@@ -63,9 +60,8 @@ impl Encoder {
                 "-shortest",
             ]);
         }
-        command
-            .args(["-movflags", "+faststart", "-f", "mp4"])
-            .arg(path);
+        // Local, seekable files do not need a full-file faststart rewrite on stop.
+        command.args(["-f", "mp4"]).arg(path);
         let mut child = command
             .stdin(Stdio::piped())
             .stdout(Stdio::null())
