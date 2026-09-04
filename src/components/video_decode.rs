@@ -63,16 +63,34 @@ fn decode(path: PathBuf, state: &Playback, tx: &Sender<Event>) -> Result<(), Str
         .args(["-v", "error", "-nostdin", "-re", "-i"]).arg(&path)
         .args(["-an", "-vf", "fps=24,scale=960:540:force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2", "-pix_fmt", "bgra", "-f", "rawvideo", "pipe:1"])
         .stdin(Stdio::null()).stderr(Stdio::null()).stdout(Stdio::piped()).spawn().map_err(|e| format!("Could not play video: {e}"))?);
-    let mut audio = Process(
-        runtime_tools::command(Tool::Ffplay)
-            .args(["-v", "error", "-nodisp", "-autoexit", "-i"])
-            .arg(&path)
-            .stdin(Stdio::null())
-            .stderr(Stdio::null())
-            .stdout(Stdio::null())
-            .spawn()
-            .map_err(|e| format!("Could not start audio playback: {e}"))?,
-    );
+    let probe = runtime_tools::command(Tool::Ffprobe)
+        .args([
+            "-v",
+            "error",
+            "-select_streams",
+            "a:0",
+            "-show_entries",
+            "stream=index",
+            "-of",
+            "csv=p=0",
+        ])
+        .arg(&path)
+        .output()
+        .map_err(|e| format!("Could not inspect audio: {e}"))?;
+    let mut audio = if probe.stdout.is_empty() {
+        None
+    } else {
+        Some(Process(
+            runtime_tools::command(Tool::Ffplay)
+                .args(["-v", "error", "-vn", "-nodisp", "-autoexit", "-i"])
+                .arg(&path)
+                .stdin(Stdio::null())
+                .stderr(Stdio::null())
+                .stdout(Stdio::null())
+                .spawn()
+                .map_err(|e| format!("Could not start audio playback: {e}"))?,
+        ))
+    };
     let mut stdout = video.0.stdout.take().unwrap();
     let mut paused = false;
     let mut pixels = vec![0; (WIDTH * HEIGHT * 4) as usize];
@@ -82,7 +100,9 @@ fn decode(path: PathBuf, state: &Playback, tx: &Sender<Event>) -> Result<(), Str
         let next_pause = state.paused.load(Ordering::Relaxed);
         if next_pause != paused {
             video.pause(next_pause);
-            audio.pause(next_pause);
+            if let Some(audio) = &audio {
+                audio.pause(next_pause);
+            }
             paused = next_pause;
         }
         if paused {
@@ -123,10 +143,16 @@ fn decode(path: PathBuf, state: &Playback, tx: &Sender<Event>) -> Result<(), Str
     if frames == 0 || !video.0.wait().map_err(|e| e.to_string())?.success() {
         return Err("Could not decode this video".into());
     }
-    if let Ok(Some(status)) = audio.0.try_wait() {
-        if !status.success() {
-            return Err("Audio playback unavailable for this video".into());
+    if let Some(audio) = &mut audio {
+        if let Ok(Some(status)) = audio.0.try_wait() {
+            if !status.success() {
+                return Err("Audio playback unavailable for this video".into());
+            }
         }
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "video_decode_tests.rs"]
+mod tests;
