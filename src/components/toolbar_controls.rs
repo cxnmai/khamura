@@ -1,24 +1,42 @@
-#[path = "toolbar_choices.rs"]
-mod choices;
 #[path = "toolbar_control_button.rs"]
 mod button;
+#[path = "toolbar_choices.rs"]
+mod choices;
+use crate::{
+    capture_settings::{CameraMode, CaptureSettings},
+    session_settings::SessionSettings,
+};
 pub(super) use button::Tooltip;
 use button::button;
 use choices::{Menu, aspect_label, choices, quality_label};
-use crate::{capture_settings::{CameraMode, CaptureSettings}, session_settings::SessionSettings};
-use gpui::{prelude::*, div, px, Context, FocusHandle, IntoElement, Render, Window};
-pub(super) struct ToolbarControls { menu: Option<Menu>, focus: FocusHandle }
+use gpui::{Context, FocusHandle, IntoElement, Render, Window, div, prelude::*, px};
+pub(super) struct ToolbarControls {
+    menu: Option<Menu>,
+    focus: FocusHandle,
+}
 impl ToolbarControls {
     pub fn new(cx: &mut Context<Self>) -> Self {
         cx.observe_global::<CaptureSettings>(|this, cx| {
-            if cx.global::<CaptureSettings>().busy { this.menu = None; }
+            if cx.global::<CaptureSettings>().busy {
+                this.menu = None;
+            }
             cx.notify();
-        }).detach();
-        Self { menu: None, focus: cx.focus_handle() }
+        })
+        .detach();
+        Self {
+            menu: None,
+            focus: cx.focus_handle(),
+        }
     }
     fn toggle(&mut self, menu: Menu, window: &mut Window, cx: &mut Context<Self>) {
-        if cx.global::<CaptureSettings>().busy { return; }
-        self.menu = if self.menu == Some(menu) { None } else { Some(menu) };
+        if cx.global::<CaptureSettings>().busy {
+            return;
+        }
+        self.menu = if self.menu == Some(menu) {
+            None
+        } else {
+            Some(menu)
+        };
         window.focus(&self.focus);
         cx.notify();
     }
@@ -31,11 +49,38 @@ impl Render for ToolbarControls {
         let theme = cx.global::<SessionSettings>().theme_color;
         let color = super::super::settings::foreground(theme);
         let first = if photo {
-            button("timer", format!("{}", if settings.timer_seconds == 0 { "Off".into() } else { format!("{}s", settings.timer_seconds) }), "Photo timer · Escape cancels countdown".into(), busy, settings.timer_seconds != 0, color, cx.listener(|this, _, window, cx| this.toggle(Menu::Timer, window, cx))).into_any_element()
+            button(
+                "timer",
+                format!(
+                    "{}",
+                    if settings.timer_seconds == 0 {
+                        "Off".into()
+                    } else {
+                        format!("{}s", settings.timer_seconds)
+                    }
+                ),
+                "Photo timer · Escape cancels countdown".into(),
+                busy,
+                settings.timer_seconds != 0,
+                color,
+                cx.listener(|this, _, window, cx| this.toggle(Menu::Timer, window, cx)),
+            )
+            .into_any_element()
         } else {
-            button("microphone", format!("{}", if settings.microphone_on { "On" } else { "Off" }), "Record microphone audio".into(), busy, settings.microphone_on, color, |_, _, cx| {
-                if !cx.global::<CaptureSettings>().busy { CaptureSettings::change(cx, |s| s.microphone_on = !s.microphone_on); }
-            }).into_any_element()
+            button(
+                "microphone",
+                format!("{}", if settings.microphone_on { "On" } else { "Off" }),
+                "Record microphone audio".into(),
+                busy,
+                settings.microphone_on,
+                color,
+                |_, _, cx| {
+                    if !cx.global::<CaptureSettings>().busy {
+                        CaptureSettings::change(cx, |s| s.microphone_on = !s.microphone_on);
+                    }
+                },
+            )
+            .into_any_element()
         };
         let (menu, label, tooltip) = if photo {
             (Menu::Aspect, aspect_label(settings.aspect).to_string(), "Photo aspect ratio (capture crop)".into())
