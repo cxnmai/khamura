@@ -93,7 +93,12 @@ impl DeviceSettings {
             .flex()
             .flex_col()
             .gap(px(4.))
-            .child(if camera { "Camera" } else { "Microphone" })
+            .child(
+                div()
+                    .text_xs()
+                    .text_color(ink.opacity(0.65))
+                    .child(if camera { "Camera" } else { "Microphone" }),
+            )
             .child(
                 div()
                     .id(if camera {
@@ -109,10 +114,11 @@ impl DeviceSettings {
                     )
                     .tab_index(0)
                     .border_1()
-                    .border_color(ink.opacity(0.2))
-                    .rounded(px(6.))
+                    .border_color(ink.opacity(0.1))
+                    .bg(ink.opacity(0.025))
+                    .rounded(px(8.))
                     .px(px(8.))
-                    .py(px(7.))
+                    .py(px(6.))
                     .text_xs()
                     .truncate()
                     .child(format!("{label} ▾"))
@@ -120,7 +126,7 @@ impl DeviceSettings {
                     .when(!busy, |field| {
                         field
                             .cursor_pointer()
-                            .hover(|style| style.bg(ink.opacity(0.1)))
+                            .hover(|style| style.bg(ink.opacity(0.055)))
                     })
                     .on_click(
                         cx.listener(move |this, _, window, cx| this.toggle(camera, window, cx)),
@@ -176,6 +182,7 @@ impl DeviceSettings {
 
 impl Render for DeviceSettings {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let ink = super::settings::foreground(cx.global::<SessionSettings>().theme_color);
         div()
             .track_focus(&self.focus)
             .on_key_down(cx.listener(|this, event: &gpui::KeyDownEvent, _, cx| {
@@ -186,13 +193,15 @@ impl Render for DeviceSettings {
             }))
             .flex()
             .flex_col()
-            .gap(px(12.))
+            .gap(px(10.))
             .child(self.selector(true, window, cx))
             .child(self.selector(false, window, cx))
             .child(
                 div()
                     .id("refresh-devices")
                     .text_xs()
+                    .text_color(ink.opacity(0.55))
+                    .hover(|style| style.text_color(ink.opacity(0.85)))
                     .cursor_pointer()
                     .child(if self.loading {
                         "Finding devices…"
