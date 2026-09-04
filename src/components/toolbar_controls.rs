@@ -30,7 +30,10 @@ fn button(id: &'static str, label: String, tooltip: String, busy: bool, active: 
         .text_color(color.opacity(if busy { 0.3 } else { 0.9 }))
         .when(active, |b| b.bg(color.opacity(0.12)))
         .when(!busy, |b| b.cursor_pointer().hover(|s| s.bg(color.opacity(0.1))))
-        .tooltip(move |_, cx| cx.new(|_| Tooltip(tooltip.clone())).into()).on_click(click).child(label)
+        .tooltip(move |_, cx| cx.new(|_| Tooltip(tooltip.clone())).into()).on_click(click)
+        .gap(px(4.))
+        .when_some(match id { "timer" => Some(crate::icons::TIMER), "microphone" => Some(crate::icons::MIC), "grid" => Some(crate::icons::GRID), _ => None }, |b, path| b.child(gpui::svg().path(path).size(px(15.))))
+        .child(label)
 }
 impl Render for ToolbarControls {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
@@ -40,9 +43,9 @@ impl Render for ToolbarControls {
         let theme = cx.global::<SessionSettings>().theme_color;
         let color = super::super::settings::foreground(theme);
         let first = if photo {
-            button("timer", format!("◷ {}", if settings.timer_seconds == 0 { "Off".into() } else { format!("{}s", settings.timer_seconds) }), "Photo timer · Escape cancels countdown".into(), busy, settings.timer_seconds != 0, color, cx.listener(|this, _, window, cx| this.toggle(Menu::Timer, window, cx))).into_any_element()
+            button("timer", format!("{}", if settings.timer_seconds == 0 { "Off".into() } else { format!("{}s", settings.timer_seconds) }), "Photo timer · Escape cancels countdown".into(), busy, settings.timer_seconds != 0, color, cx.listener(|this, _, window, cx| this.toggle(Menu::Timer, window, cx))).into_any_element()
         } else {
-            button("microphone", format!("Mic {}", if settings.microphone_on { "On" } else { "Off" }), "Record microphone audio".into(), busy, settings.microphone_on, color, |_, _, cx| {
+            button("microphone", format!("{}", if settings.microphone_on { "On" } else { "Off" }), "Record microphone audio".into(), busy, settings.microphone_on, color, |_, _, cx| {
                 if !cx.global::<CaptureSettings>().busy { CaptureSettings::change(cx, |s| s.microphone_on = !s.microphone_on); }
             }).into_any_element()
         };
@@ -52,7 +55,7 @@ impl Render for ToolbarControls {
             (Menu::Quality, settings.quality.map(|q| format!("{}p", q.height)).unwrap_or("Native".into()), format!("Video quality: {}", quality_label(settings.quality)))
         };
         let second = button("capture-format", label, tooltip, busy, false, color, cx.listener(move |this, _, window, cx| this.toggle(menu, window, cx)));
-        let grid = button("grid", "▦".into(), "Rule-of-thirds grid (not saved in captures)".into(), busy, settings.grid, color, |_, _, cx| {
+        let grid = button("grid", "".into(), "Rule-of-thirds grid (not saved in captures)".into(), busy, settings.grid, color, |_, _, cx| {
             if !cx.global::<CaptureSettings>().busy { CaptureSettings::change(cx, |s| s.grid = !s.grid); }
         });
         let items = self.menu.map(|menu| choices(menu, settings));

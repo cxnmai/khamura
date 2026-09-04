@@ -42,7 +42,15 @@ pub(super) fn mode_button(
         .items_center()
         .justify_center()
         .cursor_pointer()
-        .on_click(on_click);
+        .on_click(on_click)
+        .tooltip(move |_, cx| {
+            let label = match id {
+                "photo-mode" => "Photo · Space to capture",
+                "video-mode" => "Video · Space to start / stop recording",
+                _ => "Settings",
+            };
+            cx.new(|_| super::controls::Tooltip(label.into())).into()
+        });
 
     if let Some(circle_color) = circle_color {
         button = button.child(
