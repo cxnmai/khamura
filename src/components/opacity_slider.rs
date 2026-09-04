@@ -51,7 +51,7 @@ impl Render for OpacitySlider {
             .cursor_pointer()
             .on_mouse_down(
                 MouseButton::Left,
-                cx.listener(|this, event, _, cx| {
+                cx.listener(|this, event: &gpui::MouseDownEvent, _, cx| {
                     cx.stop_propagation();
                     this.dragging = true;
                     this.set_position(event.position.x, cx);

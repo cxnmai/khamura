@@ -176,6 +176,7 @@ impl Render for Toolbar {
             .child(
                 div()
                     .w(px(BAR_WIDTH))
+                    .occlude()
                     .h(px(BAR_HEIGHT))
                     .rounded_full()
                     .flex()

@@ -49,7 +49,7 @@ impl Render for Settings {
         div()
             .id("settings-panel")
             .track_focus(&self.focus)
-            .on_key_down(cx.listener(|_, event, _, cx| {
+            .on_key_down(cx.listener(|_, event: &gpui::KeyDownEvent, _, cx| {
                 if event.keystroke.key == "escape" {
                     cx.emit(SettingsDismissed);
                     cx.stop_propagation();
