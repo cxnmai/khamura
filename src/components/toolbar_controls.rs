@@ -138,6 +138,11 @@ impl Render for ToolbarControls {
             },
         );
         let items = self.menu.map(|menu| choices(menu, settings));
+        let (menu_width, menu_center) = match self.menu {
+            Some(Menu::Timer) => (144., 18.),
+            Some(Menu::Aspect) => (128., 56.),
+            _ => (224., 56.),
+        };
         let trigger_bounds = self.trigger_bounds.clone();
         div()
             .relative()
@@ -167,18 +172,18 @@ impl Render for ToolbarControls {
                     div()
                         .id("capture-options")
                         .absolute()
-                        .bottom(px(52.))
-                        .left_0()
-                        .w(px(220.))
-                        .max_h(px(280.))
+                        .bottom(px(48.))
+                        .left(px(menu_center - menu_width / 2.))
+                        .w(px(menu_width))
+                        .max_h(px(240.))
                         .overflow_y_scroll()
                         .occlude()
                         .rounded(px(12.))
-                        .p(px(6.))
+                        .p(px(4.))
                         .bg(theme.to_gpui(1.))
                         .text_color(color)
                         .border_1()
-                        .border_color(color.opacity(0.15))
+                        .border_color(color.opacity(0.08))
                         .on_mouse_down_out(cx.listener(
                             |this, event: &gpui::MouseDownEvent, _, cx| {
                                 // Let trigger clicks toggle the existing menu rather than
@@ -193,12 +198,16 @@ impl Render for ToolbarControls {
                                 div()
                                     .id(("capture-choice", index))
                                     .px(px(10.))
-                                    .py(px(7.))
-                                    .rounded(px(6.))
+                                    .h(px(30.))
+                                    .flex()
+                                    .items_center()
+                                    .justify_between()
+                                    .gap(px(12.))
+                                    .rounded(px(8.))
                                     .text_xs()
+                                    .text_color(color.opacity(if selected { 1. } else { 0.7 }))
                                     .cursor_pointer()
-                                    .when(selected, |row| row.bg(color.opacity(0.14)))
-                                    .hover(|row| row.bg(color.opacity(0.1)))
+                                    .hover(|row| row.bg(color.opacity(0.06)).text_color(color))
                                     .on_click(cx.listener(move |this, _, _, cx| {
                                         if !cx.global::<CaptureSettings>().busy {
                                             CaptureSettings::change(cx, |s| choice.apply(s));
@@ -207,6 +216,13 @@ impl Render for ToolbarControls {
                                         cx.notify();
                                     }))
                                     .child(label)
+                                    .child(
+                                        div()
+                                            .size(px(4.))
+                                            .flex_shrink_0()
+                                            .rounded_full()
+                                            .when(selected, |dot| dot.bg(color.opacity(0.8))),
+                                    )
                             },
                         )),
                 )
