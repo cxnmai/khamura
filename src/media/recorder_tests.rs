@@ -1,6 +1,9 @@
 use super::*;
 use std::process::Command;
 
+#[path = "recorder_hd_tests.rs"]
+mod hd;
+
 #[test]
 fn mp4_is_playable_mirrored_and_tracks_wall_clock() {
     if Command::new("ffmpeg").arg("-version").output().is_err()
