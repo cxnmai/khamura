@@ -30,8 +30,11 @@ impl Camera {
                                     }
                                     camera.source_frame = Some(source);
                                     camera.capture_ready = true;
-                                    camera.refresh_preview(cx);
                                     camera.status.clear();
+                                    if camera.gallery.is_some() {
+                                        return;
+                                    }
+                                    camera.refresh_preview(cx);
                                 }
                             }
                             CaptureMessage::Error(revision, error)

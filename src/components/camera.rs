@@ -113,6 +113,7 @@ impl Camera {
                 &gallery,
                 |camera, _, _: &super::gallery::GalleryDismissed, cx| {
                     camera.gallery = None;
+                    camera.refresh_preview(cx);
                     camera.previous_focus = None;
                     camera.focus_pending = true;
                     cx.notify();
