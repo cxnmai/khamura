@@ -196,9 +196,7 @@ impl Camera {
             } else {
                 PhotoAspect::Native
             };
-            let (x, y, w, h) = crate::media::crop_bounds(source.width(), source.height(), aspect);
-            let cropped = image::imageops::crop_imm(source.as_ref(), x, y, w, h).to_image();
-            let image = Arc::new(render_image(&cropped, self.rendered_mirror));
+            let image = Arc::new(render_image(source, self.rendered_mirror, aspect));
             if let Some(previous_frame) = self.frame.replace(image) {
                 cx.drop_image(previous_frame, None);
             }
