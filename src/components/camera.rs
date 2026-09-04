@@ -1,47 +1,92 @@
+mod actions;
+mod overlays;
+mod stream;
+mod view;
+
 use super::{
-    camera_capture::{CapturedFrame, capture_frames},
+    camera_capture::{CaptureMessage, CaptureRequest, capture_frames},
     preview_frame::render_image,
     settings::{Settings, SettingsDismissed},
-    toolbar::{SettingsToggled, Toolbar},
+    toolbar::{CaptureRequested, SettingsToggled, Toolbar},
 };
-use crate::session_settings::{CameraFit, SessionSettings};
-use async_channel::Receiver;
+use crate::{
+    capture_settings::{CameraMode, CaptureSettings, PhotoAspect},
+    config::Config,
+    session_settings::{CameraFit, SessionSettings},
+};
+use async_channel::{Receiver, Sender};
 use gpui::{
-    Context, Entity, FocusHandle, Focusable, IntoElement, MouseButton, ObjectFit, Render,
-    RenderImage, Size, Subscription, Task, WeakEntity, Window, div, img, prelude::*, px, size,
+    AnyWindowHandle, Context, Entity, FocusHandle, Focusable, IntoElement, MouseButton, ObjectFit,
+    Render, RenderImage, Size, Subscription, Task, WeakEntity, Window, div, img, prelude::*, px,
+    size,
 };
 use image::RgbaImage;
 use std::{
-    sync::{
-        Arc,
-        atomic::{AtomicBool, Ordering},
-    },
+    sync::Arc,
     thread,
+    time::{Duration, Instant},
 };
+
+#[derive(Clone, Copy)]
+enum Activity {
+    Idle,
+    Countdown(Instant),
+    SavingPhoto,
+    Recording(Instant),
+    Finalizing,
+}
 
 pub struct Camera {
     frame: Option<Arc<RenderImage>>,
-    source_frame: Option<RgbaImage>,
+    source_frame: Option<Arc<RgbaImage>>,
     rendered_mirror: bool,
     status: String,
     settings: Entity<Settings>,
     settings_open: bool,
     focus_pending: bool,
     previous_focus: Option<FocusHandle>,
-    stop_capture: Arc<AtomicBool>,
+    requests: Sender<CaptureRequest>,
+    request: CaptureRequest,
+    capture_ready: bool,
+    fps: u32,
+    activity: Activity,
+    recorder: Option<crate::media::Recorder>,
+    media_task: Option<Task<()>>,
+    error: Option<String>,
+    notice: Option<(String, Instant)>,
+    window_handle: AnyWindowHandle,
+    root_focus: FocusHandle,
+    close_requested: bool,
+    _tick_task: Task<()>,
     toolbar: Entity<Toolbar>,
     _toolbar_subscription: Subscription,
     _settings_subscription: Subscription,
+    _capture_subscription: Subscription,
     _capture_task: Task<()>,
 }
 
 impl Camera {
-    pub fn new(cx: &mut Context<Self>) -> Self {
-        let (sender, receiver) = async_channel::bounded(1);
-        let stop_capture = Arc::new(AtomicBool::new(false));
-
+    pub fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
+        let (sender, receiver) = async_channel::bounded(2);
+        let (requests, request_receiver) = async_channel::unbounded();
+        let prefs = cx.global::<CaptureSettings>();
+        let request = CaptureRequest {
+            revision: 1,
+            device: prefs.camera_device.clone(),
+            quality: (prefs.mode == CameraMode::Video)
+                .then_some(prefs.quality)
+                .flatten(),
+        };
+        let _ = requests.try_send(request.clone());
         let capture_task = Self::receive_frames(cx, receiver);
-        let capture_stop = Arc::clone(&stop_capture);
+        let tick_task = Self::tick_task(cx);
+        let root_focus = cx.focus_handle();
+        root_focus.focus(window);
+        let weak = cx.weak_entity();
+        window.on_window_should_close(cx, move |_, cx| {
+            weak.update(cx, |camera, cx| camera.request_close(cx))
+                .unwrap_or(true)
+        });
         let toolbar = cx.new(Toolbar::new);
         let settings = cx.new(Settings::new);
         let toolbar_subscription = cx.subscribe(&toolbar, |camera, _, _: &SettingsToggled, cx| {
@@ -51,6 +96,11 @@ impl Camera {
             cx.subscribe(&settings, |camera, _, _: &SettingsDismissed, cx| {
                 camera.set_settings_open(false, cx);
             });
+        let capture_subscription = cx.subscribe(&toolbar, |camera, _, _: &CaptureRequested, cx| {
+            camera.capture(cx)
+        });
+        cx.observe_global::<CaptureSettings>(|camera, cx| camera.preferences_changed(cx))
+            .detach();
         cx.observe_global::<SessionSettings>(|camera, cx| {
             if camera.rendered_mirror != cx.global::<SessionSettings>().mirror {
                 camera.refresh_preview(cx);
@@ -58,7 +108,7 @@ impl Camera {
             cx.notify();
         })
         .detach();
-        thread::spawn(move || capture_frames(sender, capture_stop));
+        thread::spawn(move || capture_frames(sender, request_receiver));
 
         Self {
             frame: None,
@@ -69,10 +119,23 @@ impl Camera {
             settings_open: false,
             focus_pending: false,
             previous_focus: None,
-            stop_capture,
+            requests,
+            request,
+            capture_ready: false,
+            fps: 30,
+            activity: Activity::Idle,
+            recorder: None,
+            media_task: None,
+            error: None,
+            notice: None,
+            close_requested: false,
+            window_handle: window.window_handle(),
+            root_focus,
+            _tick_task: tick_task,
             toolbar,
             _toolbar_subscription: toolbar_subscription,
             _settings_subscription: settings_subscription,
+            _capture_subscription: capture_subscription,
             _capture_task: capture_task,
         }
     }
@@ -102,39 +165,6 @@ impl Camera {
             )
     }
 
-    fn receive_frames(
-        cx: &mut Context<Self>,
-        receiver: Receiver<Result<CapturedFrame, String>>,
-    ) -> Task<()> {
-        cx.spawn(async move |this: WeakEntity<Self>, cx| {
-            while let Ok(message) = receiver.recv().await {
-                let update_succeeded = this
-                    .update(&mut *cx, |camera, cx| {
-                        match message {
-                            Ok(frame) => {
-                                if let Some(source) =
-                                    RgbaImage::from_raw(frame.width, frame.height, frame.pixels)
-                                {
-                                    camera.source_frame = Some(source);
-                                    camera.refresh_preview(cx);
-                                    camera.status.clear();
-                                }
-                            }
-                            Err(error) => {
-                                camera.status = error;
-                            }
-                        }
-                        cx.notify();
-                    })
-                    .is_ok();
-
-                if !update_succeeded {
-                    break;
-                }
-            }
-        })
-    }
-
     fn refresh_preview(&mut self, cx: &mut Context<Self>) {
         self.rendered_mirror = cx.global::<SessionSettings>().mirror;
         if let Some(source) = &self.source_frame {
@@ -161,6 +191,9 @@ impl Camera {
 
 impl Drop for Camera {
     fn drop(&mut self) {
-        self.stop_capture.store(true, Ordering::Relaxed);
+        self.requests.close();
+        if let Some(recorder) = &self.recorder {
+            recorder.stop();
+        }
     }
 }
