@@ -17,7 +17,7 @@ theme; a custom hex color can still be set in the config file.
 Press Escape, click outside the panel, or click the sliders button again to close
 it. Fit and color selections save immediately; opacity saves when the slider is
 released (or the panel closes). All three settings are restored on restart.
-The **Mirror preview** toggle flips the camera image horizontally and saves
+The **Mirror** toggle flips the camera image horizontally and saves
 immediately. Mirroring is on by default and works in both Fit and Fill modes;
 the toolbar and settings panel are never mirrored.
 Save failures appear in the panel with a retry action; changes remain visible

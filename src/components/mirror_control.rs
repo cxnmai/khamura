@@ -6,7 +6,7 @@ pub(super) fn mirror_control(enabled: bool, ink: gpui::Hsla) -> impl IntoElement
         .flex()
         .items_center()
         .justify_between()
-        .child("Mirror preview")
+        .child("Mirror")
         .child(
             div()
                 .id("mirror-preview")
