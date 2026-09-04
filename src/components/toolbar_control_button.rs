@@ -14,7 +14,8 @@ impl Render for Tooltip {
 }
 pub(super) fn button(
     id: &'static str,
-    label: String,
+    icon: &'static str,
+    badge: Option<String>,
     tooltip: String,
     busy: bool,
     active: bool,
@@ -23,11 +24,13 @@ pub(super) fn button(
 ) -> impl IntoElement {
     div()
         .id(id)
-        .h(px(32.))
-        .px(px(7.))
-        .rounded(px(8.))
+        .relative()
+        .size(px(36.))
+        .flex_shrink_0()
+        .rounded_full()
         .flex()
         .items_center()
+        .justify_center()
         .text_xs()
         .text_color(color.opacity(if busy { 0.3 } else { 0.9 }))
         .when(active, |b| b.bg(color.opacity(0.12)))
@@ -36,15 +39,27 @@ pub(super) fn button(
         })
         .tooltip(move |_, cx| cx.new(|_| Tooltip(tooltip.clone())).into())
         .on_click(click)
-        .gap(px(4.))
-        .when_some(
-            match id {
-                "timer" => Some(crate::icons::TIMER),
-                "microphone" => Some(crate::icons::MIC),
-                "grid" => Some(crate::icons::GRID),
-                _ => None,
-            },
-            |b, path| b.child(gpui::svg().path(path).size(px(15.))),
+        .child(
+            gpui::svg()
+                .path(icon)
+                .size(px(19.))
+                .text_color(color.opacity(if busy {
+                    0.3
+                } else if active {
+                    1.0
+                } else {
+                    0.65
+                })),
         )
-        .child(label)
+        .when_some(badge, |button, badge| {
+            button.child(
+                div()
+                    .absolute()
+                    .right(px(1.))
+                    .bottom_0()
+                    .text_size(px(9.))
+                    .font_weight(gpui::FontWeight::BOLD)
+                    .child(badge),
+            )
+        })
 }

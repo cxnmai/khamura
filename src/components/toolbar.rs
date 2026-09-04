@@ -10,7 +10,7 @@ use crate::{
 use gpui::{ClickEvent, Context, EventEmitter, IntoElement, Render, Window, div, prelude::*, px};
 use style::*;
 
-pub const BAR_WIDTH: f32 = 420.0;
+pub const BAR_WIDTH: f32 = 296.0;
 const BAR_HEIGHT: f32 = 48.0;
 const TOGGLE_HEIGHT: f32 = 40.0;
 const END_SIZE: f32 = 40.0;

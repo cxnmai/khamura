@@ -4,7 +4,8 @@ mod button;
 #[path = "toolbar_choices.rs"]
 mod choices;
 use crate::{
-    capture_settings::{CameraMode, CaptureSettings},
+    capture_settings::{CameraMode, CaptureSettings, PhotoAspect},
+    icons::{GRID, MIC, MIC_OFF, RATIO, TIMER, VIDEO_QUALITY},
     session_settings::SessionSettings,
 };
 pub(super) use button::Tooltip;
@@ -55,15 +56,16 @@ impl Render for ToolbarControls {
         let first = if photo {
             button(
                 "timer",
+                TIMER,
+                (settings.timer_seconds != 0).then(|| settings.timer_seconds.to_string()),
                 format!(
-                    "{}",
+                    "Photo timer: {} · Escape cancels countdown",
                     if settings.timer_seconds == 0 {
                         "Off".into()
                     } else {
-                        format!("{}s", settings.timer_seconds)
+                        format!("{} seconds", settings.timer_seconds)
                     }
                 ),
-                "Photo timer · Escape cancels countdown".into(),
                 busy,
                 settings.timer_seconds != 0,
                 color,
@@ -73,8 +75,12 @@ impl Render for ToolbarControls {
         } else {
             button(
                 "microphone",
-                format!("{}", if settings.microphone_on { "On" } else { "Off" }),
-                "Record microphone audio".into(),
+                if settings.microphone_on { MIC } else { MIC_OFF },
+                None,
+                format!(
+                    "Microphone: {}",
+                    if settings.microphone_on { "On" } else { "Off" }
+                ),
                 busy,
                 settings.microphone_on,
                 color,
@@ -86,35 +92,42 @@ impl Render for ToolbarControls {
             )
             .into_any_element()
         };
-        let (menu, label, tooltip) = if photo {
+        let (menu, icon, active, tooltip) = if photo {
             (
                 Menu::Aspect,
-                aspect_label(settings.aspect).to_string(),
-                "Photo aspect ratio (capture crop)".into(),
+                RATIO,
+                settings.aspect != PhotoAspect::Native,
+                format!(
+                    "Photo aspect ratio: {} (capture crop)",
+                    aspect_label(settings.aspect)
+                ),
             )
         } else {
             (
                 Menu::Quality,
-                settings
-                    .quality
-                    .map(|q| format!("{}p", q.height))
-                    .unwrap_or("Native".into()),
+                VIDEO_QUALITY,
+                settings.quality.is_some(),
                 format!("Video quality: {}", quality_label(settings.quality)),
             )
         };
         let second = button(
             "capture-format",
-            label,
+            icon,
+            None,
             tooltip,
             busy,
-            false,
+            active,
             color,
             cx.listener(move |this, _, window, cx| this.toggle(menu, window, cx)),
         );
         let grid = button(
             "grid",
-            "".into(),
-            "Rule-of-thirds grid (not saved in captures)".into(),
+            GRID,
+            None,
+            format!(
+                "Rule-of-thirds grid: {} (not saved in captures)",
+                if settings.grid { "On" } else { "Off" }
+            ),
             busy,
             settings.grid,
             color,
