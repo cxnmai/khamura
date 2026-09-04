@@ -75,7 +75,10 @@ impl Config {
         Ok(())
     }
 
-    pub fn save_capture(&self, preferences: &crate::capture_settings::CapturePreferences) -> Result<(), String> {
+    pub fn save_capture(
+        &self,
+        preferences: &crate::capture_settings::CapturePreferences,
+    ) -> Result<(), String> {
         crate::config_store::save_capture(&self.path, &self.home, preferences)
             .map_err(|error| format!("{}: {error}", self.path.display()))
     }

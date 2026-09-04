@@ -80,7 +80,11 @@ fn missing_config_materializes_and_bad_markers_do_not_use_defaults() {
     let reloaded = Config::load_from_home(home.path()).unwrap();
     assert_eq!(reloaded.photo_directory, config.photo_directory);
     assert!(reloaded.mirror);
-    assert!(fs::read_to_string(&target).unwrap().contains("mirror = true"));
+    assert!(
+        fs::read_to_string(&target)
+            .unwrap()
+            .contains("mirror = true")
+    );
     assert!(
         fs::read_to_string(&target)
             .unwrap()

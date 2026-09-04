@@ -108,15 +108,23 @@ pub(crate) fn save_capture(
         Err(error) => return Err(error.to_string()),
     };
     Config::parse(&original, home)?;
-    let mut document = original.parse::<DocumentMut>().map_err(|error| error.to_string())?;
+    let mut document = original
+        .parse::<DocumentMut>()
+        .map_err(|error| error.to_string())?;
     let serialized = toml::to_string(preferences).map_err(|error| error.to_string())?;
-    let capture = serialized.parse::<DocumentMut>().map_err(|error| error.to_string())?;
+    let capture = serialized
+        .parse::<DocumentMut>()
+        .map_err(|error| error.to_string())?;
     if document.get("capture").is_none() {
         document["capture"] = toml_edit::Item::Table(toml_edit::Table::new());
     }
-    let table = document["capture"].as_table_like_mut().ok_or("capture must be a table")?;
+    let table = document["capture"]
+        .as_table_like_mut()
+        .ok_or("capture must be a table")?;
     for key in ["quality", "camera_device", "microphone_device"] {
-        if !capture.contains_key(key) { table.remove(key); }
+        if !capture.contains_key(key) {
+            table.remove(key);
+        }
     }
     for (key, item) in capture.iter() {
         let mut replacement = item.clone();
