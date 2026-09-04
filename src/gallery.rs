@@ -104,3 +104,33 @@ fn thumbnail(path: &Path) -> Option<Arc<RenderImage>> {
     }
     Some(Arc::new(RenderImage::new(vec![Frame::new(pixels)])))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use image::{Rgba, RgbaImage};
+
+    #[test]
+    fn scan_filters_files_orders_newest_first_and_keeps_corrupt_entries() {
+        let directory = tempfile::tempdir().unwrap();
+        let older = directory.path().join("older.png");
+        let newer = directory.path().join("newer.PNG");
+        RgbaImage::from_pixel(800, 400, Rgba([255, 0, 0, 255]))
+            .save(&older)
+            .unwrap();
+        std::fs::write(&newer, b"corrupt photo").unwrap();
+        std::fs::File::open(&older)
+            .unwrap()
+            .set_modified(SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(100))
+            .unwrap();
+        std::fs::write(directory.path().join("video.mp4"), b"video").unwrap();
+        std::fs::create_dir(directory.path().join("folder.png")).unwrap();
+        let photos = scan(directory.path()).unwrap();
+        assert_eq!(photos.len(), 2);
+        assert_eq!(photos[0].path, newer);
+        assert!(photos[0].thumbnail.is_none());
+        assert_eq!(photos[1].path, older);
+        assert!(photos[1].thumbnail.is_some());
+        assert!(scan(&directory.path().join("missing")).unwrap().is_empty());
+    }
+}
