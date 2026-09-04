@@ -2855,6 +2855,7 @@ dependencies = [
  "gpui",
  "image",
  "libc",
+ "mozjpeg",
  "nokhwa",
  "serde",
  "serde_json",
