@@ -14,7 +14,10 @@ Includes camera and microphone selection, capture timers, mirroring, and themes.
 - A Vulkan-capable graphics driver. VAAPI encoding is optional; recording falls
   back to software when hardware encoding is unavailable.
 
-Once the crate and matching release binaries are published, install with:
+## Installation
+
+On x86-64 Linux with glibc 2.35+, install using
+[cargo-binstall](https://github.com/cargo-bins/cargo-binstall):
 
 ```sh
 cargo binstall khamura
@@ -25,6 +28,19 @@ Desktop installation embeds the icon and registers the current binary in your
 application menu, without opening the camera. It uses `$XDG_DATA_HOME` (default
 `~/.local/share`); re-run it if you move the binary. System dependencies still
 need to be installed separately. See [release packaging](docs/releases.md).
+
+### Nix / NixOS
+
+Install the native package, including runtime tools, the desktop launcher, and icon:
+
+```sh
+nix profile add github:cxnmai/khamura
+```
+
+For a declarative NixOS or Home Manager setup, add `github:cxnmai/khamura` as a
+flake input and include `inputs.khamura.packages.${pkgs.stdenv.hostPlatform.system}.default`
+in `environment.systemPackages` or `home.packages`. No `--install-desktop` step
+is needed for Nix installs. The first installation builds from source.
 
 ## Configuration
 
