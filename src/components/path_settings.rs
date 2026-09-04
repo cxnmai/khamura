@@ -140,7 +140,7 @@ impl Render for PathSettings {
                             .text_color(ink.opacity(0.6))
                             .truncate()
                             .tooltip(move |_, cx| cx.new(|_| PathTooltip(tooltip.clone())).into())
-                            .child(path),
+                            .child(super::path_label::path_label(&path)),
                     )
             }))
             .when_some(self.error.clone(), |panel, error| {
