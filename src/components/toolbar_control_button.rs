@@ -1,5 +1,5 @@
 use gpui::{App, Context, IntoElement, Render, Window, div, prelude::*, px};
-pub(super) struct Tooltip(pub String);
+pub(crate) struct Tooltip(pub String);
 impl Render for Tooltip {
     fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
         div()

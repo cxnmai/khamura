@@ -1,3 +1,4 @@
+use std::{cell::Cell, rc::Rc};
 #[path = "toolbar_control_button.rs"]
 mod button;
 #[path = "toolbar_choices.rs"]
@@ -13,6 +14,7 @@ use gpui::{Context, FocusHandle, IntoElement, Render, Window, div, prelude::*, p
 pub(super) struct ToolbarControls {
     menu: Option<Menu>,
     focus: FocusHandle,
+    trigger_bounds: Rc<Cell<gpui::Bounds<gpui::Pixels>>>,
 }
 impl ToolbarControls {
     pub fn new(cx: &mut Context<Self>) -> Self {
@@ -23,6 +25,7 @@ impl ToolbarControls {
         Self {
             menu: None,
             focus: cx.focus_handle(),
+            trigger_bounds: Rc::new(Cell::new(gpui::Bounds::default())),
         }
     }
     pub(super) fn dismiss(&mut self, cx: &mut Context<Self>) {
@@ -122,6 +125,7 @@ impl Render for ToolbarControls {
             },
         );
         let items = self.menu.map(|menu| choices(menu, settings));
+        let trigger_bounds = self.trigger_bounds.clone();
         div()
             .relative()
             .track_focus(&self.focus)
@@ -134,6 +138,14 @@ impl Render for ToolbarControls {
                     cx.notify();
                 }
             }))
+            .child(
+                gpui::canvas(
+                    move |bounds, _, _| trigger_bounds.set(bounds),
+                    |_, _, _, _| {},
+                )
+                .absolute()
+                .size_full(),
+            )
             .child(first)
             .child(second)
             .child(grid)
@@ -154,9 +166,12 @@ impl Render for ToolbarControls {
                         .text_color(color)
                         .border_1()
                         .border_color(color.opacity(0.15))
-                        .on_mouse_down_out(cx.listener(|this, _, _, cx| {
-                            this.menu = None;
-                            cx.notify();
+                        .on_mouse_down_out(cx.listener(|this, event, _, cx| {
+                            // Let trigger clicks toggle the existing menu rather than
+                            // dismissing on mouse-down and reopening on mouse-up.
+                            if !this.trigger_bounds.get().contains(&event.position) {
+                                this.dismiss(cx);
+                            }
                         }))
                         .children(items.into_iter().enumerate().map(
                             |(index, (label, choice, selected))| {
