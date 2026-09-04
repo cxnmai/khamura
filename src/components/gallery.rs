@@ -6,6 +6,8 @@ use std::path::PathBuf;
 mod actions;
 #[path = "gallery_content.rs"]
 mod content;
+#[path = "gallery_filmstrip.rs"]
+mod filmstrip;
 
 pub struct GalleryDismissed;
 pub struct Gallery {
@@ -16,6 +18,7 @@ pub struct Gallery {
     options_open: bool,
     action_notice: Option<String>,
     copy_busy: bool,
+    filmstrip_scroll: gpui::ScrollHandle,
 }
 
 impl Gallery {
@@ -32,10 +35,22 @@ impl Gallery {
             options_open: false,
             action_notice: None,
             copy_busy: false,
+            filmstrip_scroll: gpui::ScrollHandle::new(),
         }
     }
 
     fn open_item(&mut self, path: PathBuf, cx: &mut Context<Self>) {
+        if self.selected.as_ref() == Some(&path) {
+            return;
+        }
+        if let Some(index) = cx
+            .global::<GalleryStore>()
+            .items
+            .iter()
+            .position(|item| item.path == path)
+        {
+            self.filmstrip_scroll.scroll_to_item(index);
+        }
         self.player = None;
         if path
             .extension()
@@ -152,6 +167,9 @@ impl Render for Gallery {
                 )
             })
             .child(self.content(window, cx))
+            .when(self.selected.is_some(), |view| {
+                view.child(self.filmstrip(cx))
+            })
     }
 }
 
