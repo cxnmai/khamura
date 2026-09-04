@@ -166,13 +166,15 @@ impl Render for ToolbarControls {
                         .text_color(color)
                         .border_1()
                         .border_color(color.opacity(0.15))
-                        .on_mouse_down_out(cx.listener(|this, event, _, cx| {
-                            // Let trigger clicks toggle the existing menu rather than
-                            // dismissing on mouse-down and reopening on mouse-up.
-                            if !this.trigger_bounds.get().contains(&event.position) {
-                                this.dismiss(cx);
-                            }
-                        }))
+                        .on_mouse_down_out(cx.listener(
+                            |this, event: &gpui::MouseDownEvent, _, cx| {
+                                // Let trigger clicks toggle the existing menu rather than
+                                // dismissing on mouse-down and reopening on mouse-up.
+                                if !this.trigger_bounds.get().contains(&event.position) {
+                                    this.dismiss(cx);
+                                }
+                            },
+                        ))
                         .children(items.into_iter().enumerate().map(
                             |(index, (label, choice, selected))| {
                                 div()
