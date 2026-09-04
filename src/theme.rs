@@ -25,7 +25,7 @@ impl Rgb {
 }
 
 /// The base RGB color used for the camera's letterbox bars.
-pub const CAMERA_LETTERBOX_COLOR: Rgb = Rgb::new(3, 77, 112);
+pub const CAMERA_LETTERBOX_COLOR: Rgb = Rgb::new(0, 0, 0);
 
 /// The opacity applied to the camera's letterbox bars.
 pub const CAMERA_LETTERBOX_OPACITY: f32 = 0.7;
